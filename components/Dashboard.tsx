@@ -67,15 +67,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ gameState }) => {
         </Card>
 
         <Card title="Owned Properties" icon={<PropertyIcon className="text-green-400"/>}>
-          {player.properties.length > 0 ? (
+          {Object.keys(player.properties).length > 0 ? (
             <ul className="space-y-2 text-sm">
-              {player.properties.map(id => (
-                <li key={id} className="p-2 bg-gray-700 rounded">
-                  <span className="font-semibold">{properties[id]?.name || id}</span>
-                  <br/>
-                  <span className="text-xs text-gray-400">Rent/Turn: ${properties[id]?.rentPerTurn.toFixed(2)}</span>
-                </li>
-              ))}
+              {Object.keys(player.properties).map(id => {
+                const propertyData = player.properties[id];
+                const propertyDetails = properties[id];
+                return (
+                  <li key={id} className="p-2 bg-gray-700 rounded">
+                    <span className="font-semibold">{propertyDetails?.name || id}</span>
+                    <br/>
+                    <span className="text-xs text-gray-400">
+                      Value: ${propertyData.currentValue.toLocaleString()} | Rent/Turn: ${propertyDetails?.rentPerTurn.toFixed(2)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="text-gray-400 text-sm">No properties owned.</p>

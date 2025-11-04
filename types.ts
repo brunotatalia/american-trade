@@ -14,19 +14,20 @@ export interface Order {
 export interface Player {
   money: number;
   reputation: number;
-  commodities: Record<string, { quantity: number; avgBuyPrice: number }>;
-  properties: string[]; // IDs of owned properties
+  commodities: Record<string, { quantity: number; avgBuyPrice: number; purchasedTurn: number }>;
+  properties: Record<string, { purchasedTurn: number; currentValue: number }>; // Property ID -> purchase info
   skills: string[]; // IDs of unlocked skills
   orders: Order[];
 }
 
 export interface Commodity {
-  id:string;
+  id: string;
   name: string;
   price: number;
   volatility: number; // For price change simulation (0-1)
   description: string;
   icon?: React.ReactNode;
+  category?: 'agricultural' | 'energy' | 'precious_metal' | 'stock' | 'bond' | 'currency' | 'crypto'; // For fee calculation
 }
 
 export interface Property {
@@ -36,6 +37,8 @@ export interface Property {
   rentPerTurn: number;
   description: string;
   icon?: React.ReactNode;
+  maintenancePerTurn?: number; // Calculated based on property value
+  appreciationRate?: number; // Annual appreciation rate (defaults to global rate)
 }
 
 export interface Skill {

@@ -26,7 +26,7 @@ const App: React.FC = () => {
       money: 0,
       reputation: INITIAL_PLAYER_REPUTATION,
       commodities: {},
-      properties: [],
+      properties: {}, // Changed from array to Record
       skills: [],
       orders: [],
     },
@@ -75,20 +75,26 @@ const App: React.FC = () => {
       setGameState(prev => ({ ...prev, isLoadingEvent: true })); // Signal loading for news/event
 
       const updatedCommodities = GameLogic.updateMarketPrices(gameState.commodities, gameState.currentEra!, gameState.player.skills);
-      const income = GameLogic.calculatePlayerIncome(gameState.player, gameState.properties, gameState.skills);
-      
+      const income = GameLogic.calculatePlayerIncome(gameState.player, gameState.properties, gameState.skills, updatedCommodities);
+
       let newPlayerState = { ...gameState.player, money: gameState.player.money + income };
       let newLogs: LogEntry[] = [];
 
       if (income > 0) {
         newLogs.push(GameLogic.createLog(`Earned $${income.toFixed(2)} from investments.`, 'success'));
+      } else if (income < 0) {
+        newLogs.push(GameLogic.createLog(`Lost $${Math.abs(income).toFixed(2)} from property maintenance.`, 'warning'));
       }
-      
+
+      // Update property values (appreciation)
+      newPlayerState = GameLogic.updatePropertyValues(newPlayerState, gameState.properties, gameState.player.skills);
+
       // Process pending orders
       const { player: playerAfterOrders, logs: orderLogs } = GameLogic.processPendingOrders(
         newPlayerState,
         updatedCommodities,
-        gameState.player.skills
+        gameState.player.skills,
+        gameState.gameTurn
       );
       newPlayerState = playerAfterOrders;
       if (orderLogs.length > 0) {
@@ -138,12 +144,12 @@ const App: React.FC = () => {
   const handleBuyCommodity = useCallback((commodityId: string, quantity: number) => {
     const commodity = gameState.commodities[commodityId];
     if (!commodity) return;
-    const result = GameLogic.attemptBuyCommodity(gameState.player, commodity, quantity, gameState.player.skills);
+    const result = GameLogic.attemptBuyCommodity(gameState.player, commodity, quantity, gameState.player.skills, gameState.gameTurn);
     if (result.success && result.player) {
       setGameState(prev => ({ ...prev, player: result.player! }));
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
-  }, [gameState.player, gameState.commodities, gameState.player.skills, addLogEntry]);
+  }, [gameState.player, gameState.commodities, gameState.player.skills, gameState.gameTurn, addLogEntry]);
 
   const handleSellCommodity = useCallback((commodityId: string, quantity: number) => {
     const commodity = gameState.commodities[commodityId];
@@ -158,12 +164,12 @@ const App: React.FC = () => {
   const handleBuyProperty = useCallback((propertyId: string) => {
     const property = gameState.properties[propertyId];
     if (!property) return;
-    const result = GameLogic.attemptBuyProperty(gameState.player, property);
+    const result = GameLogic.attemptBuyProperty(gameState.player, property, gameState.gameTurn);
     if (result.success && result.player) {
       setGameState(prev => ({ ...prev, player: result.player! }));
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
-  }, [gameState.player, gameState.properties, addLogEntry]);
+  }, [gameState.player, gameState.properties, gameState.gameTurn, addLogEntry]);
 
   const handleUnlockSkill = useCallback((skillId: string) => {
     const skill = gameState.skills[skillId];
