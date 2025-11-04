@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, CSSProperties } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -31,14 +31,33 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
     xl: 'max-w-xl',
   };
 
+  const modalStyle: CSSProperties = {
+    backgroundColor: 'var(--color-surface)',
+    borderRadius: 'var(--radius-card)',
+    boxShadow: 'var(--shadow-lg)',
+  };
+
+  const titleStyle: CSSProperties = {
+    color: 'var(--color-text)',
+    fontFamily: 'var(--font-display)',
+  };
+
+  const closeButtonStyle: CSSProperties = {
+    color: 'var(--color-text-secondary)',
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-300 ease-in-out">
-      <div className={`bg-gray-800 rounded-lg shadow-xl p-6 w-full ${sizeClasses[size]} transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fadeInScale`}>
+      <div
+        className={`p-6 w-full ${sizeClasses[size]} transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fadeInScale`}
+        style={modalStyle}
+      >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-100">{title}</h2>
+          <h2 className="text-xl font-semibold" style={titleStyle}>{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 transition-colors"
+            className="hover:opacity-70 transition-opacity"
+            style={closeButtonStyle}
             aria-label="Close modal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">

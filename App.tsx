@@ -1,15 +1,16 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Player, Commodity, Property, Skill, GameEvent, Era, LogEntry, GameState, ActiveView, Order
 } from './types';
-import { 
+import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -20,7 +21,9 @@ import { LogView } from './components/LogView';
 import { Button } from './components/ui/Button';
 import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { setTheme } = useTheme();
+
   const [gameState, setGameState] = useState<GameState>({
     player: {
       money: 0,
@@ -53,6 +56,9 @@ const App: React.FC = () => {
   }, []);
 
   const handleSelectEra = useCallback((era: Era) => {
+    // Update theme based on selected era
+    setTheme(era.id);
+
     setGameState(prev => ({
       ...prev,
       player: {
@@ -65,7 +71,7 @@ const App: React.FC = () => {
       gameLog: [GameLogic.createLog(`Welcome to the ${era.name} era! Your journey begins.`, 'event')],
     }));
     setActiveView('MARKET');
-  }, []);
+  }, [setTheme]);
 
   // Game Tick Effect
   useEffect(() => {
@@ -246,37 +252,39 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen max-w-7xl mx-auto">
+    <div className="flex flex-col h-screen max-w-7xl mx-auto" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
       {showApiKeyWarning && (
         <div className="bg-yellow-500 text-black p-2 text-center text-sm">
           {API_KEY_WARNING} Some features like dynamic events and news might be limited or use placeholders.
           <Button size="sm" variant="ghost" onClick={() => setShowApiKeyWarning(false)} className="ml-4 !text-black !border-black">Dismiss</Button>
         </div>
       )}
-      <header className="p-4 bg-gray-800 shadow-md">
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+      <header className="p-4 shadow-md" style={{ backgroundColor: 'var(--color-surface)', borderBottom: `1px solid var(--color-border)` }}>
+        <h1 className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-primary)' }}>
           American Dream Trader
         </h1>
-        <p className="text-sm text-gray-400">Era: {gameState.currentEra.name} | Turn: {gameState.gameTurn}</p>
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Era: {gameState.currentEra.name} | Turn: {gameState.gameTurn}
+        </p>
       </header>
-      
+
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 flex flex-col">
+        <aside className="w-64 p-4 space-y-4 flex flex-col" style={{ backgroundColor: 'var(--color-surface)', borderRight: `1px solid var(--color-border)` }}>
             <NavButton view="MARKET" label="Market" icon={<CommodityIcon/>}/>
             <NavButton view="REAL_ESTATE" label="Real Estate" icon={<PropertyIcon/>}/>
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
-            <div className="mt-auto"> {/* Pushes dashboard to bottom of nav if desired, or integrate into main view */}
+            <div className="mt-auto">
                  {/* Can add quick stats here or a mini-log preview */}
             </div>
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-gray-850 p-1 border-b border-gray-700"> {/* Slightly different shade for dashboard */}
+            <div className="p-1" style={{ backgroundColor: 'var(--color-surface)', borderBottom: `1px solid var(--color-border)` }}>
                  <Dashboard gameState={gameState} />
             </div>
-            <div className="flex-1 overflow-y-auto bg-gray-900">
-                 {gameState.isLoadingEvent && activeView === 'MARKET' && ( // Show loading only if relevant view active
-                    <div className="p-4 text-center text-yellow-400">
+            <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--color-background)' }}>
+                 {gameState.isLoadingEvent && activeView === 'MARKET' && (
+                    <div className="p-4 text-center" style={{ color: 'var(--color-warning)' }}>
                         <LoadingSpinnerIcon className="inline-block mr-2"/> Processing turn...
                     </div>
                 )}
@@ -286,13 +294,24 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <EventPopup 
-        event={gameState.currentEvent} 
+      <EventPopup
+        event={gameState.currentEvent}
         onClose={() => setGameState(prev => ({ ...prev, currentEvent: null }))}
         onChoice={handleEventChoice}
         gameState={gameState}
       />
     </div>
+  );
+};
+
+/**
+ * App wrapper with ThemeProvider
+ */
+const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 };
 

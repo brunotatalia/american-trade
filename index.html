@@ -7,31 +7,46 @@
     <title>American Dream Trader</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      /* Era-themed styling with CSS variables */
       body {
-        font-family: 'Inter', sans-serif; /* A nice modern sans-serif font */
-        background-color: #111827; /* bg-gray-900 */
-        color: #f3f4f6; /* text-gray-100 */
+        font-family: var(--font-body, 'Inter', sans-serif);
+        background-color: var(--color-background, #111827);
+        color: var(--color-text, #f3f4f6);
+        transition: background-color 0.5s ease, color 0.5s ease;
       }
-       /* For a more subtle scrollbar that fits the dark theme */
+
+      /* Themed scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #1f2937; /* bg-gray-800 */
+        background: var(--color-surface, #1f2937);
       }
       ::-webkit-scrollbar-thumb {
-        background: #4b5563; /* bg-gray-600 */
-        border-radius: 4px;
+        background: var(--color-border, #4b5563);
+        border-radius: var(--radius-button, 4px);
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #6b7280; /* bg-gray-500 */
+        background: var(--color-surface-hover, #6b7280);
       }
-      /* Add a specific style for the modal animation if it's not already in Modal.tsx, though it seems it is. */
+
+      /* Smooth transitions for theme changes */
+      * {
+        transition-property: background-color, border-color, color;
+        transition-duration: 0.3s;
+        transition-timing-function: ease;
+      }
+
+      /* Prevent transition on initial load */
+      .no-transition * {
+        transition: none !important;
+      }
     </style>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Fonts for all three eras -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
