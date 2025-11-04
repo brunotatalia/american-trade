@@ -1,0 +1,5 @@
+{
+  "name": "American Dream Trader",
+  "description": "A simulation game where players navigate different economic eras, trade commodities, invest in real estate, and develop skills to build their fortune. The game features dynamic events and market news powered by Gemini API.",
+  "requestFramePermissions": []
+}
