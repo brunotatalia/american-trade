@@ -184,12 +184,31 @@ const CommodityRow: React.FC<CommodityRowProps> = ({ commodity, ownedQuantity, c
 
   const handleBuy = () => {
     if (numQuantity > 0) onBuy(numQuantity);
+    setQuantity("1"); // Reset after transaction
   };
 
   const handleSell = () => {
     if (numQuantity > 0) onSell(numQuantity);
+    setQuantity("1"); // Reset after transaction
   };
-  
+
+  // Calculate max affordable quantity for buying
+  const handleMaxBuy = () => {
+    const maxAffordable = Math.floor(playerMoney / commodity.price);
+    setQuantity(maxAffordable.toString());
+  };
+
+  // Set max available quantity for selling
+  const handleMaxSell = () => {
+    setQuantity(availableToSell.toString());
+  };
+
+  // Real-time transaction preview
+  const totalCost = numQuantity * commodity.price;
+  const totalRevenue = numQuantity * commodity.price;
+  const canAffordBuy = playerMoney >= totalCost;
+  const canSell = availableToSell >= numQuantity;
+
   const potentialProfitLossPerUnit = ownedQuantity > 0 ? commodity.price - avgBuyPrice : 0;
   const totalPotentialProfitLoss = potentialProfitLossPerUnit * ownedQuantity;
 
@@ -222,19 +241,92 @@ const CommodityRow: React.FC<CommodityRowProps> = ({ commodity, ownedQuantity, c
             )}
         </div>
       
-        <div className="flex items-center space-x-2">
+        {/* Real-time Transaction Preview */}
+        {numQuantity > 0 && (
+          <div className="mb-2 text-sm space-y-1">
+            <div className={`flex justify-between ${canAffordBuy ? 'text-green-400' : 'text-red-400'}`}>
+              <span>Total Cost:</span>
+              <span className="font-semibold">${totalCost.toFixed(2)}</span>
+            </div>
+            <div className={`flex justify-between ${canSell ? 'text-blue-400' : 'text-gray-500'}`}>
+              <span>Total Revenue:</span>
+              <span className="font-semibold">${totalRevenue.toFixed(2)}</span>
+            </div>
+            {canSell && avgBuyPrice > 0 && (
+              <div className={`flex justify-between ${totalRevenue - (numQuantity * avgBuyPrice) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span>Net P/L on Sale:</span>
+                <span className="font-semibold">
+                  {totalRevenue - (numQuantity * avgBuyPrice) >= 0 ? '+' : ''}
+                  ${(totalRevenue - (numQuantity * avgBuyPrice)).toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
             <input
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            min="1"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-            placeholder="Qty"
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              min="1"
+              className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+              placeholder="Qty"
             />
-            <Button onClick={handleBuy} size="sm" variant="primary" disabled={numQuantity <=0 || playerMoney < commodity.price * numQuantity}>Buy</Button>
-            <Button onClick={handleSell} size="sm" variant="secondary" disabled={numQuantity <=0 || availableToSell < numQuantity}>Sell</Button>
+            <div className="relative group">
+              <Button
+                onClick={handleBuy}
+                size="sm"
+                variant="primary"
+                disabled={numQuantity <= 0 || !canAffordBuy}
+                title={numQuantity <= 0 ? "Enter a quantity" : !canAffordBuy ? "Not enough funds" : "Buy commodity"}
+              >
+                Buy
+              </Button>
+              {(numQuantity <= 0 || !canAffordBuy) && (
+                <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-gray-900 text-xs text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-gray-600">
+                  {numQuantity <= 0 ? "Enter a quantity" : "Not enough funds"}
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={handleMaxBuy}
+              size="sm"
+              variant="ghost"
+              title="Buy maximum affordable quantity"
+            >
+              Max
+            </Button>
+            <div className="relative group">
+              <Button
+                onClick={handleSell}
+                size="sm"
+                variant="secondary"
+                disabled={numQuantity <= 0 || !canSell}
+                title={numQuantity <= 0 ? "Enter a quantity" : !canSell ? "Insufficient units to sell" : "Sell commodity"}
+              >
+                Sell
+              </Button>
+              {(numQuantity <= 0 || !canSell) && (
+                <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-gray-900 text-xs text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-gray-600">
+                  {numQuantity <= 0 ? "Enter a quantity" : "Insufficient units to sell"}
+                </div>
+              )}
+            </div>
+            {availableToSell > 0 && (
+              <Button
+                onClick={handleMaxSell}
+                size="sm"
+                variant="ghost"
+                title="Sell all available units"
+              >
+                Max
+              </Button>
+            )}
             <Button onClick={onSetOrder} size="sm" variant="ghost">Set Order</Button>
-      </div>
+          </div>
+        </div>
     </Card>
   );
 };

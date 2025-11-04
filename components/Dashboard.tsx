@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Player, Commodity, Property, Skill, GameState } from '../types';
 import { MoneyIcon, ReputationIcon, CommodityIcon, PropertyIcon, SkillIcon, InfoIcon, TrendUpIcon, TrendDownIcon } from './icons';
 import { Card } from './ui/Card';
@@ -8,13 +8,13 @@ interface DashboardProps {
   gameState: GameState;
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode, subtext?: string }> = ({ title, value, icon, subtext }) => (
+const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode, subtext?: string, flashClass?: string }> = ({ title, value, icon, subtext, flashClass }) => (
   <Card className="flex-1 min-w-[150px]">
     <div className="flex items-center space-x-3">
       <div className="p-2 bg-gray-700 rounded-full">{icon}</div>
       <div>
         <p className="text-xs text-gray-400">{title}</p>
-        <p className="text-xl font-bold text-gray-100">{value}</p>
+        <p className={`text-xl font-bold text-gray-100 transition-all duration-200 ${flashClass || ''}`}>{value}</p>
         {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
       </div>
     </div>
@@ -24,11 +24,31 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 
 export const Dashboard: React.FC<DashboardProps> = ({ gameState }) => {
   const { player, commodities, properties, skills, gameTurn, currentEra } = gameState;
+  const [moneyFlash, setMoneyFlash] = useState<'green' | 'red' | null>(null);
+  const prevMoneyRef = useRef<number>(player.money);
+
+  // Visual feedback for money changes
+  useEffect(() => {
+    const prevMoney = prevMoneyRef.current;
+    const currentMoney = player.money;
+
+    if (currentMoney > prevMoney) {
+      setMoneyFlash('green');
+      setTimeout(() => setMoneyFlash(null), 500);
+    } else if (currentMoney < prevMoney) {
+      setMoneyFlash('red');
+      setTimeout(() => setMoneyFlash(null), 500);
+    }
+
+    prevMoneyRef.current = currentMoney;
+  }, [player.money]);
+
+  const moneyFlashClass = moneyFlash === 'green' ? 'text-green-400 scale-110' : moneyFlash === 'red' ? 'text-red-400 scale-110' : '';
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-wrap gap-4 mb-4">
-        <StatCard title="Money" value={`$${player.money.toLocaleString()}`} icon={<MoneyIcon className="text-green-400"/>} />
+        <StatCard title="Money" value={`$${player.money.toLocaleString()}`} icon={<MoneyIcon className="text-green-400"/>} flashClass={moneyFlashClass} />
         <StatCard title="Reputation" value={player.reputation} icon={<ReputationIcon className="text-blue-400"/>} />
         <StatCard title="Game Turn" value={gameTurn} icon={<InfoIcon className="text-yellow-400"/>} subtext={currentEra?.name || ''} />
       </div>

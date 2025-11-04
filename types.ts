@@ -88,4 +88,4 @@ export interface GameState {
   marketNews: string[];
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'NEWS';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'NEWS' | 'ADVISOR';

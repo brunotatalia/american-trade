@@ -105,6 +105,30 @@ export const SKILLS_DATA: Record<string, Skill> = {
     description: "Efficiently manage properties to maximize rental income.",
     effectDescription: "Increases rental income from properties by 10%.",
     icon: React.createElement(SkillIcon, {className: "text-orange-400"})
+  },
+  INSIDER_TRADING: {
+    id: 'INSIDER_TRADING',
+    name: 'Insider Trading',
+    cost: 10000,
+    description: "Use ethically dubious methods to gain advance knowledge of market events.",
+    effectDescription: "Higher chance of receiving pre-event market rumors and early warnings.",
+    icon: React.createElement(SkillIcon, {className: "text-red-500"})
+  },
+  DIVERSIFIED_PORTFOLIO: {
+    id: 'DIVERSIFIED_PORTFOLIO',
+    name: 'Diversified Portfolio',
+    cost: 7500,
+    description: "Master the art of spreading risk across multiple asset classes.",
+    effectDescription: "Gain reputation bonus each turn when owning 3+ different asset types (commodities, properties).",
+    icon: React.createElement(SkillIcon, {className: "text-green-500"})
+  },
+  CORPORATE_LOBBYING: {
+    id: 'CORPORATE_LOBBYING',
+    name: 'Corporate Lobbying',
+    cost: 15000,
+    description: "Influence policy makers to protect your business interests.",
+    effectDescription: "Reduces the chance of negative events and can mitigate their impact.",
+    icon: React.createElement(SkillIcon, {className: "text-blue-600"})
   }
 };
 
@@ -137,6 +161,6 @@ export const ERAS_DATA: Era[] = [
     marketVolatilityModifier: 1.2,
     availableCommodities: ['CORN', 'OIL', 'GOLD', 'TECH_STOCKS', 'BITCOIN'],
     availableProperties: ['SMALL_APT', 'COMMERCIAL_SPACE', 'WAREHOUSE'],
-    availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS', 'REAL_ESTATE_MGMT']
+    availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS', 'REAL_ESTATE_MGMT', 'INSIDER_TRADING', 'DIVERSIFIED_PORTFOLIO', 'CORPORATE_LOBBYING']
   }
 ];

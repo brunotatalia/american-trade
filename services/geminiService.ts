@@ -57,13 +57,13 @@ export const generateGameEventDescription = async (eraName: string, playerStatus
         };
     }
     const playerContext = playerStatusHint ? `The player is currently ${playerStatusHint}.` : "";
-    const prompt = `You are a game master for "American Dream Trader". 
+    const prompt = `You are a game master for "American Dream Trader".
     The current era is ${eraName}. ${playerContext}
     Generate a concise, flavorful random event for the player.
     Provide a "title" (max 5 words), a "description" (max 30 words), and a "type" ('positive', 'negative', 'neutral', or 'opportunity').
     Format the response as a JSON object with keys "title", "description", and "type".
     Example: {"title": "Unexpected Windfall", "description": "An old investment suddenly pays off.", "type": "positive"}`;
-    
+
     const responseText = await generateText(prompt);
 
     try {
@@ -86,4 +86,81 @@ export const generateGameEventDescription = async (eraName: string, playerStatus
             type: 'neutral'
         };
     }
+};
+
+// Generate player-centric news based on their recent actions
+export const generatePlayerNews = async (
+    playerName: string,
+    action: string,
+    reputation: number,
+    eraName: string
+): Promise<string> => {
+    if (!isGeminiAvailable()) {
+        return `Trader ${playerName} continues to make moves in the ${eraName} markets. (Gemini offline)`;
+    }
+
+    const reputationLevel = reputation > 80 ? 'legendary' : reputation > 50 ? 'respected' : reputation > 20 ? 'emerging' : 'newcomer';
+    const prompt = `You are a financial news anchor in the ${eraName}. Write a very short, sensational news headline (under 15 words) about a trader named "${playerName}" (reputation level: ${reputationLevel}) who just ${action}. Make it exciting and era-appropriate.`;
+
+    return generateText(prompt, true);
+};
+
+// Generate analyst report for a commodity
+export const generateAnalystReport = async (
+    commodityName: string,
+    currentPrice: number,
+    priceHistory: 'rising' | 'falling' | 'stable',
+    eraName: string
+): Promise<{ rating: 'BUY' | 'HOLD' | 'SELL', rationale: string }> => {
+    if (!isGeminiAvailable()) {
+        return {
+            rating: 'HOLD',
+            rationale: `${commodityName} appears stable at $${currentPrice.toFixed(2)}. (Gemini offline)`
+        };
+    }
+
+    const prompt = `You are a financial analyst in the ${eraName}. Analyze ${commodityName} trading at $${currentPrice.toFixed(2)}. Recent trend: ${priceHistory}.
+    Provide a rating (BUY, HOLD, or SELL) and a brief rationale (max 20 words) in era-appropriate language.
+    Format as JSON: {"rating": "BUY", "rationale": "Strong fundamentals..."}`;
+
+    const responseText = await generateText(prompt, true);
+
+    try {
+        let jsonStr = responseText.trim();
+        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+        const match = jsonStr.match(fenceRegex);
+        if (match && match[2]) {
+            jsonStr = match[2].trim();
+        }
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.rating && parsed.rationale && ['BUY', 'HOLD', 'SELL'].includes(parsed.rating)) {
+            return { rating: parsed.rating, rationale: parsed.rationale };
+        }
+        throw new Error("Invalid analyst report structure");
+    } catch (error) {
+        console.error("Failed to parse analyst report:", error);
+        return {
+            rating: 'HOLD',
+            rationale: `Market conditions for ${commodityName} remain uncertain. Further analysis needed.`
+        };
+    }
+};
+
+// Generate financial advisor response
+export const generateAdvisorResponse = async (
+    question: string,
+    playerMoney: number,
+    playerReputation: number,
+    eraName: string,
+    ownedAssets: string[]
+): Promise<string> => {
+    if (!isGeminiAvailable()) {
+        return `Thank you for your question. Unfortunately, I cannot provide personalized advice at this time. (Gemini offline)`;
+    }
+
+    const prompt = `You are a financial advisor in the ${eraName}. The player asks: "${question}".
+    Their current situation: Money: $${playerMoney.toFixed(2)}, Reputation: ${playerReputation}, Owned assets: ${ownedAssets.join(', ') || 'None'}.
+    Provide concise, era-appropriate, personalized advice in 2-3 sentences. Be helpful but stay in character for the era.`;
+
+    return generateText(prompt);
 };

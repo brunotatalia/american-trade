@@ -1,24 +1,26 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Player, Commodity, Property, Skill, GameEvent, Era, LogEntry, GameState, ActiveView, Order
 } from './types';
-import { 
+import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
+import * as SoundService from './services/soundService';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
 import { RealEstateView } from './components/RealEstateView';
 import { SkillsView } from './components/SkillsView';
+import { AdvisorView } from './components/AdvisorView';
 import { EventPopup } from './components/EventPopup';
 import { LogView } from './components/LogView';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon, InfoIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -76,12 +78,21 @@ const App: React.FC = () => {
 
       const updatedCommodities = GameLogic.updateMarketPrices(gameState.commodities, gameState.currentEra!, gameState.player.skills);
       const income = GameLogic.calculatePlayerIncome(gameState.player, gameState.properties, gameState.skills);
-      
-      let newPlayerState = { ...gameState.player, money: gameState.player.money + income };
+      const reputationBonus = GameLogic.calculateReputationBonus(gameState.player);
+
+      let newPlayerState = {
+        ...gameState.player,
+        money: gameState.player.money + income,
+        reputation: gameState.player.reputation + reputationBonus
+      };
       let newLogs: LogEntry[] = [];
 
       if (income > 0) {
         newLogs.push(GameLogic.createLog(`Earned $${income.toFixed(2)} from investments.`, 'success'));
+      }
+
+      if (reputationBonus > 0) {
+        newLogs.push(GameLogic.createLog(`Your diversified portfolio earned you +${reputationBonus} reputation.`, 'success'));
       }
       
       // Process pending orders
@@ -101,6 +112,13 @@ const App: React.FC = () => {
       if (Math.random() < 0.5) {
         latestNewsItem = await GameLogic.fetchMarketNewsForRandomCommodity(gameState);
         if(latestNewsItem) newLogs.push(GameLogic.createLog(`News: ${latestNewsItem}`, 'info'));
+      }
+
+      // Generate insider trading rumors if player has the skill
+      const insiderRumor = GameLogic.generateInsiderRumor(gameState);
+      if (insiderRumor) {
+        latestNewsItem = insiderRumor; // Replace or add to news ticker
+        newLogs.push(GameLogic.createLog(`${insiderRumor}`, 'info'));
       }
 
       // Attempt to trigger a random event
@@ -140,7 +158,18 @@ const App: React.FC = () => {
     if (!commodity) return;
     const result = GameLogic.attemptBuyCommodity(gameState.player, commodity, quantity, gameState.player.skills);
     if (result.success && result.player) {
-      setGameState(prev => ({ ...prev, player: result.player! }));
+      setGameState(prev => {
+        const updatedCommodities = { ...prev.commodities };
+        // Apply price impact if there is one
+        if (result.priceImpact && result.priceImpact > 0) {
+          const newPrice = commodity.price * (1 + result.priceImpact);
+          updatedCommodities[commodityId] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+        }
+        return { ...prev, player: result.player!, commodities: updatedCommodities };
+      });
+      SoundService.playPurchaseSound();
+    } else {
+      SoundService.playErrorSound();
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
   }, [gameState.player, gameState.commodities, gameState.player.skills, addLogEntry]);
@@ -150,7 +179,18 @@ const App: React.FC = () => {
     if (!commodity) return;
     const result = GameLogic.attemptSellCommodity(gameState.player, commodity, quantity, gameState.player.skills);
     if (result.success && result.player) {
-      setGameState(prev => ({ ...prev, player: result.player! }));
+      setGameState(prev => {
+        const updatedCommodities = { ...prev.commodities };
+        // Apply price impact if there is one
+        if (result.priceImpact && result.priceImpact < 0) {
+          const newPrice = commodity.price * (1 + result.priceImpact);
+          updatedCommodities[commodityId] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+        }
+        return { ...prev, player: result.player!, commodities: updatedCommodities };
+      });
+      SoundService.playSellSound();
+    } else {
+      SoundService.playErrorSound();
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
   }, [gameState.player, gameState.commodities, gameState.player.skills, addLogEntry]);
@@ -161,6 +201,9 @@ const App: React.FC = () => {
     const result = GameLogic.attemptBuyProperty(gameState.player, property);
     if (result.success && result.player) {
       setGameState(prev => ({ ...prev, player: result.player! }));
+      SoundService.playPurchaseSound();
+    } else {
+      SoundService.playErrorSound();
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
   }, [gameState.player, gameState.properties, addLogEntry]);
@@ -171,6 +214,9 @@ const App: React.FC = () => {
     const result = GameLogic.attemptUnlockSkill(gameState.player, skill);
     if (result.success && result.player) {
       setGameState(prev => ({ ...prev, player: result.player! }));
+      SoundService.playSuccessSound();
+    } else {
+      SoundService.playErrorSound();
     }
     if (result.log) addLogEntry(result.log.message, result.log.type);
   }, [gameState.player, gameState.skills, addLogEntry]);
@@ -212,24 +258,26 @@ const App: React.FC = () => {
   const renderActiveView = () => {
     switch (activeView) {
       case 'MARKET':
-        return <MarketView 
-                    gameState={gameState} 
-                    onBuyCommodity={handleBuyCommodity} 
+        return <MarketView
+                    gameState={gameState}
+                    onBuyCommodity={handleBuyCommodity}
                     onSellCommodity={handleSellCommodity}
                     onPlaceOrder={handlePlaceOrder}
-                    onCancelOrder={handleCancelOrder} 
+                    onCancelOrder={handleCancelOrder}
                 />;
       case 'REAL_ESTATE':
         return <RealEstateView gameState={gameState} onBuyProperty={handleBuyProperty} />;
       case 'SKILLS':
         return <SkillsView gameState={gameState} onUnlockSkill={handleUnlockSkill} />;
+      case 'ADVISOR':
+        return <AdvisorView gameState={gameState} />;
       default:
-        return <MarketView 
-                    gameState={gameState} 
-                    onBuyCommodity={handleBuyCommodity} 
-                    onSellCommodity={handleSellCommodity} 
+        return <MarketView
+                    gameState={gameState}
+                    onBuyCommodity={handleBuyCommodity}
+                    onSellCommodity={handleSellCommodity}
                     onPlaceOrder={handlePlaceOrder}
-                    onCancelOrder={handleCancelOrder} 
+                    onCancelOrder={handleCancelOrder}
                 />;
     }
   };
@@ -265,6 +313,7 @@ const App: React.FC = () => {
             <NavButton view="MARKET" label="Market" icon={<CommodityIcon/>}/>
             <NavButton view="REAL_ESTATE" label="Real Estate" icon={<PropertyIcon/>}/>
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
+            <NavButton view="ADVISOR" label="Advisor" icon={<InfoIcon/>}/>
             <div className="mt-auto"> {/* Pushes dashboard to bottom of nav if desired, or integrate into main view */}
                  {/* Can add quick stats here or a mini-log preview */}
             </div>

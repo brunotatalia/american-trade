@@ -45,8 +45,26 @@ export const calculatePlayerIncome = (player: Player, properties: Record<string,
   return parseFloat(income.toFixed(2));
 };
 
+// Calculate reputation bonus for Diversified Portfolio skill
+export const calculateReputationBonus = (player: Player): number => {
+  if (!player.skills.includes('DIVERSIFIED_PORTFOLIO')) return 0;
+
+  const commodityCount = Object.keys(player.commodities).length;
+  const propertyCount = player.properties.length;
+  const totalAssetTypes = commodityCount + (propertyCount > 0 ? 1 : 0); // Count properties as 1 asset type if owned
+
+  // If player owns 3+ different types of assets, gain reputation
+  if (totalAssetTypes >= 3) {
+    return 2; // +2 reputation per turn
+  }
+  return 0;
+};
+
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
+
+  const hasCorporateLobbying = gameState.player.skills.includes('CORPORATE_LOBBYING');
+
   // Simple chance to trigger an event
   if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
     return null;
@@ -54,6 +72,11 @@ export const createRandomGameEvent = async (gameState: GameState): Promise<GameE
 
   const playerStatusHint = `Money: ${gameState.player.money}, Reputation: ${gameState.player.reputation}`;
   const { title, description, type } = await generateGameEventDescription(gameState.currentEra.name, playerStatusHint);
+
+  // Corporate Lobbying: 50% chance to prevent negative events
+  if (hasCorporateLobbying && type === 'negative' && Math.random() < 0.5) {
+    return null; // Event prevented by lobbying
+  }
   
   const eventId = `event-${Date.now()}`;
   let choices;
@@ -109,12 +132,12 @@ export const createLog = (message: string, type: LogEntry['type']): LogEntry => 
 
 
 export const attemptBuyCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
     skills: string[]
-): { player?: Player, log?: LogEntry, success: boolean } => {
-    
+): { player?: Player, log?: LogEntry, success: boolean, priceImpact?: number } => {
+
     let priceMultiplier = 1;
     if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 0.98; // 2% discount with Basic Negotiation
@@ -134,7 +157,7 @@ export const attemptBuyCommodity = (
 
     const existingAmount = newPlayerState.commodities[commodity.id]?.quantity || 0;
     const existingAvgPrice = newPlayerState.commodities[commodity.id]?.avgBuyPrice || 0;
-    
+
     const newTotalQuantity = existingAmount + quantity;
     const newAvgBuyPrice = ((existingAvgPrice * existingAmount) + (commodity.price * priceMultiplier * quantity)) / newTotalQuantity;
 
@@ -142,20 +165,28 @@ export const attemptBuyCommodity = (
         ...newPlayerState.commodities,
         [commodity.id]: { quantity: newTotalQuantity, avgBuyPrice: parseFloat(newAvgBuyPrice.toFixed(2)) }
     };
-    
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Bought ${quantity} ${commodity.name} for $${totalCost.toFixed(2)}. New avg price: $${newAvgBuyPrice.toFixed(2)}`, 'success'),
-        success: true
+
+    // Calculate price impact for large trades (buying pushes price up)
+    // Impact increases with quantity: 0.5% per 50 units, max 5%
+    let priceImpact = 0;
+    if (quantity >= 50) {
+        priceImpact = Math.min((quantity / 50) * 0.005, 0.05); // Max 5% impact
+    }
+
+    return {
+        player: newPlayerState,
+        log: createLog(`Bought ${quantity} ${commodity.name} for $${totalCost.toFixed(2)}. New avg price: $${newAvgBuyPrice.toFixed(2)}${priceImpact > 0 ? ' (Market price impacted!)' : ''}`, 'success'),
+        success: true,
+        priceImpact
     };
 };
 
 export const attemptSellCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
     skills: string[]
-): { player?: Player, log?: LogEntry, success: boolean } => {
+): { player?: Player, log?: LogEntry, success: boolean, priceImpact?: number } => {
 
     const currentOwned = player.commodities[commodity.id]?.quantity || 0;
     if (quantity <= 0) {
@@ -169,7 +200,7 @@ export const attemptSellCommodity = (
     if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 1.02; // 2% bonus with Basic Negotiation
     }
-    
+
     const totalRevenue = commodity.price * quantity * priceMultiplier;
     const avgBuyPrice = player.commodities[commodity.id].avgBuyPrice;
     const costOfGoodsSold = avgBuyPrice * quantity;
@@ -185,12 +216,20 @@ export const attemptSellCommodity = (
     if (newPlayerState.commodities[commodity.id].quantity === 0) {
         delete newPlayerState.commodities[commodity.id]; // Clean up if zero quantity
     }
-    
+
+    // Calculate price impact for large trades (selling pushes price down)
+    // Impact increases with quantity: -0.5% per 50 units, max -5%
+    let priceImpact = 0;
+    if (quantity >= 50) {
+        priceImpact = -Math.min((quantity / 50) * 0.005, 0.05); // Max -5% impact
+    }
+
     const profitLossMsg = profit >= 0 ? `Profit: $${profit.toFixed(2)}` : `Loss: $${Math.abs(profit).toFixed(2)}`;
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}`, 'success'),
-        success: true
+    return {
+        player: newPlayerState,
+        log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}${priceImpact < 0 ? ' (Market price impacted!)' : ''}`, 'success'),
+        success: true,
+        priceImpact
     };
 };
 
@@ -251,6 +290,34 @@ export const fetchMarketNewsForRandomCommodity = async (gameState: GameState): P
         return generateMarketNews(commodity.name, gameState.currentEra.name);
     }
     return null;
+};
+
+// Generate insider trading rumors for players with the Insider Trading skill
+export const generateInsiderRumor = (gameState: GameState): string | null => {
+    if (!gameState.player.skills.includes('INSIDER_TRADING')) return null;
+    if (!gameState.currentEra) return null;
+
+    // 40% chance to get a rumor each turn with insider trading skill
+    if (Math.random() > 0.4) return null;
+
+    const availableCommodities = gameState.currentEra.availableCommodities;
+    if (availableCommodities.length === 0) return null;
+
+    const randomIndex = Math.floor(Math.random() * availableCommodities.length);
+    const commodityId = availableCommodities[randomIndex];
+    const commodity = gameState.commodities[commodityId];
+
+    if (!commodity) return null;
+
+    const direction = Math.random() > 0.5 ? 'rise' : 'fall';
+    const rumors = [
+        `🔒 INSIDER TIP: ${commodity.name} prices expected to ${direction} soon...`,
+        `🔒 RUMOR: Major ${direction === 'rise' ? 'buying' : 'selling'} activity detected in ${commodity.name} markets`,
+        `🔒 WHISPER: Sources suggest ${commodity.name} could ${direction} significantly next turn`,
+        `🔒 CONFIDENTIAL: ${commodity.name} showing signs of ${direction === 'rise' ? 'bullish' : 'bearish'} movement`
+    ];
+
+    return rumors[Math.floor(Math.random() * rumors.length)];
 };
 
 export const attemptPlaceOrder = (
