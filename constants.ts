@@ -6,7 +6,33 @@ import React from 'react';
 export const GEMINI_MODEL_TEXT = 'gemini-2.5-flash-preview-04-17';
 export const API_KEY_WARNING = "process.env.API_KEY is not set. Gemini API features will be disabled.";
 
-export const INITIAL_PLAYER_REPUTATION = 10;
+// Influence System Constants
+export const INITIAL_PLAYER_INFLUENCE = 0; // Start neutral
+export const MAX_INFLUENCE = 100; // Iconic
+export const MIN_INFLUENCE = -100; // Notorious
+export const HIGH_INFLUENCE_THRESHOLD = 50; // Unlocks Blue Chip opportunities
+export const LOW_INFLUENCE_THRESHOLD = -50; // Triggers SEC investigations
+
+// Influence level labels
+export const INFLUENCE_LEVELS = {
+  ICONIC: { min: 75, label: 'Iconic', color: 'text-amber-400' },
+  RESPECTED: { min: 50, label: 'Respected', color: 'text-green-400' },
+  FAVORABLE: { min: 25, label: 'Favorable', color: 'text-blue-400' },
+  NEUTRAL: { min: -24, label: 'Neutral', color: 'text-gray-400' },
+  QUESTIONABLE: { min: -49, label: 'Questionable', color: 'text-orange-400' },
+  NOTORIOUS: { min: -100, label: 'Notorious', color: 'text-red-400' }
+};
+
+// Influence change amounts
+export const INFLUENCE_CHANGES = {
+  LARGE_PROFIT_QUICK_TRADE: -2, // Seen as greedy
+  SUCCESSFUL_STOP_LOSS: 1, // Seen as savvy
+  BENEVOLENT_EVENT_CHOICE: 10,
+  RUTHLESS_EVENT_CHOICE: -15,
+  EVENT_TALK_SUCCESS: 5,
+  EVENT_TALK_FAILURE: -10
+};
+
 export const GAME_TICK_INTERVAL_MS = 10000; // 10 seconds per turn
 export const MAX_LOG_ENTRIES = 50;
 

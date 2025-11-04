@@ -13,7 +13,7 @@ export interface Order {
 
 export interface Player {
   money: number;
-  reputation: number;
+  influence: number; // Range: -100 (Notorious) to +100 (Iconic)
   commodities: Record<string, { quantity: number; avgBuyPrice: number }>;
   properties: string[]; // IDs of owned properties
   skills: string[]; // IDs of unlocked skills

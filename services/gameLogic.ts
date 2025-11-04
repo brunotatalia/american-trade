@@ -1,7 +1,7 @@
 
 
 import { GameState, Commodity, Player, Property, Skill, LogEntry, GameEvent, Era, Order } from '../types';
-import { SKILLS_DATA } from '../constants';
+import { SKILLS_DATA, INFLUENCE_CHANGES, MAX_INFLUENCE, MIN_INFLUENCE, HIGH_INFLUENCE_THRESHOLD, LOW_INFLUENCE_THRESHOLD } from '../constants';
 import { generateGameEventDescription, generateMarketNews } from './geminiService';
 
 export const updateMarketPrices = (
@@ -45,14 +45,112 @@ export const calculatePlayerIncome = (player: Player, properties: Record<string,
   return parseFloat(income.toFixed(2));
 };
 
+export const createBlueChipOpportunityEvent = (gameState: GameState): GameEvent | null => {
+  // Only trigger for high influence
+  if (gameState.player.influence < HIGH_INFLUENCE_THRESHOLD) return null;
+
+  // 15% chance per turn when influence is above 50
+  if (Math.random() > 0.15) return null;
+
+  const eventId = `bluechip-${Date.now()}`;
+  const investmentCost = 500;
+  const guaranteedReturn = 750;
+
+  return {
+    id: eventId,
+    title: "💎 Blue Chip Opportunity",
+    description: "Your stellar reputation has opened doors! An exclusive Blue Chip investment opportunity is available only to traders with high influence. This is a nearly guaranteed profit.",
+    type: 'opportunity',
+    choices: [
+      {
+        text: `💰 Invest $${investmentCost} (Exclusive Deal)`,
+        action: (gs: GameState) => {
+          if (gs.player.money >= investmentCost) {
+            const profit = guaranteedReturn - investmentCost;
+            return {
+              player: { ...gs.player, money: gs.player.money + profit },
+              gameLog: [...gs.gameLog, createLog(`[BLUE CHIP] High Influence unlocked exclusive opportunity! (+$${profit})`, 'success')]
+            };
+          } else {
+            return { gameLog: [...gs.gameLog, createLog("Not enough money for this investment.", 'warning')] };
+          }
+        }
+      },
+      {
+        text: "❌ Pass",
+        action: () => { /* Do nothing */ }
+      }
+    ],
+    triggeredAtTurn: gameState.gameTurn
+  };
+};
+
+export const createSECInvestigationEvent = (gameState: GameState): GameEvent | null => {
+  // Only trigger for very low influence
+  if (gameState.player.influence > LOW_INFLUENCE_THRESHOLD) return null;
+
+  // 20% chance per turn when influence is below -50
+  if (Math.random() > 0.2) return null;
+
+  const eventId = `sec-investigation-${Date.now()}`;
+  const finePenalty = Math.floor(gameState.player.money * 0.15); // 15% of current money
+
+  return {
+    id: eventId,
+    title: "⚖️ SEC Investigation",
+    description: "The Securities and Exchange Commission has launched an investigation into your trading practices. Your low public standing has made you a target for regulatory scrutiny.",
+    type: 'negative',
+    choices: [
+      {
+        text: `💸 Pay settlement ($${finePenalty})`,
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money - finePenalty },
+            gameLog: [...gs.gameLog, createLog(`[CONSEQUENCE] SEC investigation settled. Low Influence attracts unwanted attention. (-$${finePenalty})`, 'error')]
+          };
+        }
+      },
+      {
+        text: "🎲 Contest the charges",
+        action: (gs: GameState) => {
+          const success = Math.random() > 0.7; // 30% chance to win
+          if (success) {
+            const newInfluence = Math.min(MAX_INFLUENCE, gs.player.influence + 5);
+            return {
+              player: { ...gs.player, influence: newInfluence },
+              gameLog: [...gs.gameLog, createLog("[VICTORY] Successfully contested SEC charges! (+5 Influence)", 'success')]
+            };
+          } else {
+            const doublePenalty = finePenalty * 2;
+            const newInfluence = Math.max(MIN_INFLUENCE, gs.player.influence - 5);
+            return {
+              player: { ...gs.player, money: gs.player.money - doublePenalty, influence: newInfluence },
+              gameLog: [...gs.gameLog, createLog(`[DEFEAT] Lost SEC case. Penalties doubled! (-$${doublePenalty}, -5 Influence)`, 'error')]
+            };
+          }
+        }
+      }
+    ],
+    triggeredAtTurn: gameState.gameTurn
+  };
+};
+
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
-  // Simple chance to trigger an event
-  if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
+
+  // Adjust event chance based on influence
+  let eventChance = 0.3; // Base 30% chance
+  if (gameState.player.influence >= HIGH_INFLUENCE_THRESHOLD) {
+    eventChance = 0.4; // 40% chance for high influence (more opportunities)
+  } else if (gameState.player.influence <= LOW_INFLUENCE_THRESHOLD) {
+    eventChance = 0.4; // 40% chance for low influence (more problems)
+  }
+
+  if (Math.random() > eventChance) {
     return null;
   }
 
-  const playerStatusHint = `Money: ${gameState.player.money}, Reputation: ${gameState.player.reputation}`;
+  const playerStatusHint = `Money: ${gameState.player.money}, Influence: ${gameState.player.influence}`;
   const { title, description, type } = await generateGameEventDescription(gameState.currentEra.name, playerStatusHint);
   
   const eventId = `event-${Date.now()}`;
@@ -60,36 +158,89 @@ export const createRandomGameEvent = async (gameState: GameState): Promise<GameE
 
   // Example dynamic choices based on event type or content
   if (type === 'opportunity') {
-    choices = [
-      { text: "Invest $100", action: (gs: GameState) => {
-          if (gs.player.money >= 100) {
-            const outcomeRoll = Math.random();
-            if (outcomeRoll > 0.5) { // Success
-                return { player: {...gs.player, money: gs.player.money + 150 /* Profit */}, gameLog: [...gs.gameLog, createLog("Investment paid off!", 'success')] };
-            } else { // Failure
-                return { player: {...gs.player, money: gs.player.money - 100}, gameLog: [...gs.gameLog, createLog("Investment failed.", 'warning')] };
+    // Opportunity events now have benevolent vs ruthless choices
+    const randomChoice = Math.random();
+    if (randomChoice > 0.5) {
+      // Community investment opportunity
+      choices = [
+        { text: "💰 Take maximum profit ($200, Ruthless)", action: (gs: GameState) => {
+            if (gs.player.money >= 100) {
+              const newInfluence = Math.max(MIN_INFLUENCE, gs.player.influence + INFLUENCE_CHANGES.RUTHLESS_EVENT_CHOICE);
+              return {
+                player: {...gs.player, money: gs.player.money + 100, influence: newInfluence},
+                gameLog: [...gs.gameLog, createLog(`[ACTION] Ruthless profit-taking damaged your public image. (${INFLUENCE_CHANGES.RUTHLESS_EVENT_CHOICE} Influence)`, 'warning')]
+              };
+            } else {
+              return { gameLog: [...gs.gameLog, createLog("Not enough money to invest.", 'warning')] };
             }
-          } else {
-            return { gameLog: [...gs.gameLog, createLog("Not enough money to invest.", 'warning')] };
           }
-        }
-      },
-      { text: "Ignore", action: () => { /* Do nothing */ } }
-    ];
+        },
+        { text: "🤝 Share profits with community ($75, Benevolent)", action: (gs: GameState) => {
+            if (gs.player.money >= 100) {
+              const newInfluence = Math.min(MAX_INFLUENCE, gs.player.influence + INFLUENCE_CHANGES.BENEVOLENT_EVENT_CHOICE);
+              return {
+                player: {...gs.player, money: gs.player.money - 25, influence: newInfluence},
+                gameLog: [...gs.gameLog, createLog(`[ACTION] Your generosity improved your reputation! (+${INFLUENCE_CHANGES.BENEVOLENT_EVENT_CHOICE} Influence)`, 'success')]
+              };
+            } else {
+              return { gameLog: [...gs.gameLog, createLog("Not enough money to invest.", 'warning')] };
+            }
+          }
+        },
+        { text: "❌ Decline", action: () => { /* Do nothing */ } }
+      ];
+    } else {
+      // Standard investment opportunity
+      choices = [
+        { text: "Invest $100", action: (gs: GameState) => {
+            if (gs.player.money >= 100) {
+              const outcomeRoll = Math.random();
+              if (outcomeRoll > 0.5) { // Success
+                  return { player: {...gs.player, money: gs.player.money + 150 /* Profit */}, gameLog: [...gs.gameLog, createLog("Investment paid off!", 'success')] };
+              } else { // Failure
+                  return { player: {...gs.player, money: gs.player.money - 100}, gameLog: [...gs.gameLog, createLog("Investment failed.", 'warning')] };
+              }
+            } else {
+              return { gameLog: [...gs.gameLog, createLog("Not enough money to invest.", 'warning')] };
+            }
+          }
+        },
+        { text: "Ignore", action: () => { /* Do nothing */ } }
+      ];
+    }
   } else if (type === 'negative' && Math.random() < 0.5) {
      choices = [
         { text: "Pay fine ($50)", action: (gs: GameState) => {
             return { player: {...gs.player, money: gs.player.money - 50}, gameLog: [...gs.gameLog, createLog("Paid a fine.", 'warning')] };
         }},
         { text: "Try to talk your way out", action: (gs: GameState) => {
-            const success = Math.random() * (gs.player.reputation / 100) > 0.3; // Higher rep helps
+            const success = Math.random() * (gs.player.influence / 100) > 0.3; // Higher influence helps
             if (success) {
-                 return { player: {...gs.player, reputation: gs.player.reputation + 5 }, gameLog: [...gs.gameLog, createLog("Successfully navigated the situation!", 'success')] };
+                 const newInfluence = Math.min(MAX_INFLUENCE, gs.player.influence + INFLUENCE_CHANGES.EVENT_TALK_SUCCESS);
+                 return { player: {...gs.player, influence: newInfluence }, gameLog: [...gs.gameLog, createLog(`Successfully navigated the situation! (+${INFLUENCE_CHANGES.EVENT_TALK_SUCCESS} Influence)`, 'success')] };
             } else {
-                 return { player: {...gs.player, reputation: gs.player.reputation - 10, money: gs.player.money - 75 }, gameLog: [...gs.gameLog, createLog("Failed to talk your way out, situation worsened.", 'error')] };
+                 const newInfluence = Math.max(MIN_INFLUENCE, gs.player.influence + INFLUENCE_CHANGES.EVENT_TALK_FAILURE);
+                 return { player: {...gs.player, influence: newInfluence, money: gs.player.money - 75 }, gameLog: [...gs.gameLog, createLog(`Failed to talk your way out, situation worsened. (${INFLUENCE_CHANGES.EVENT_TALK_FAILURE} Influence)`, 'error')] };
             }
         }}
      ];
+  } else if (type === 'positive') {
+    // Positive events can offer benevolent choices to gain even more influence
+    choices = [
+      { text: "🎁 Donate to charity ($50)", action: (gs: GameState) => {
+          if (gs.player.money >= 50) {
+            const newInfluence = Math.min(MAX_INFLUENCE, gs.player.influence + INFLUENCE_CHANGES.BENEVOLENT_EVENT_CHOICE);
+            return {
+              player: {...gs.player, money: gs.player.money - 50, influence: newInfluence},
+              gameLog: [...gs.gameLog, createLog(`[ACTION] Your charitable donation was well-received! (+${INFLUENCE_CHANGES.BENEVOLENT_EVENT_CHOICE} Influence)`, 'success')]
+            };
+          } else {
+            return { gameLog: [...gs.gameLog, createLog("Not enough money to donate.", 'warning')] };
+          }
+        }
+      },
+      { text: "💼 Keep the gains", action: () => { /* Do nothing */ } }
+    ];
   }
 
 
@@ -109,15 +260,24 @@ export const createLog = (message: string, type: LogEntry['type']): LogEntry => 
 
 
 export const attemptBuyCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
     skills: string[]
 ): { player?: Player, log?: LogEntry, success: boolean } => {
-    
+
     let priceMultiplier = 1;
     if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 0.98; // 2% discount with Basic Negotiation
+    }
+
+    // High influence grants better prices
+    if (player.influence >= 50) {
+        priceMultiplier *= 0.97; // Additional 3% discount for high influence
+    }
+    // Low influence results in worse prices
+    if (player.influence <= -50) {
+        priceMultiplier *= 1.05; // 5% markup for low influence (higher spreads)
     }
 
     const totalCost = commodity.price * quantity * priceMultiplier;
@@ -151,11 +311,12 @@ export const attemptBuyCommodity = (
 };
 
 export const attemptSellCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
-    skills: string[]
-): { player?: Player, log?: LogEntry, success: boolean } => {
+    skills: string[],
+    isStopLoss: boolean = false
+): { player?: Player, log?: LogEntry, success: boolean, influenceChange?: number } => {
 
     const currentOwned = player.commodities[commodity.id]?.quantity || 0;
     if (quantity <= 0) {
@@ -169,14 +330,43 @@ export const attemptSellCommodity = (
     if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 1.02; // 2% bonus with Basic Negotiation
     }
-    
+
+    // High influence grants better selling prices
+    if (player.influence >= 50) {
+        priceMultiplier *= 1.03; // Additional 3% bonus for high influence
+    }
+    // Low influence results in worse selling prices
+    if (player.influence <= -50) {
+        priceMultiplier *= 0.95; // 5% penalty for low influence (higher spreads)
+    }
+
     const totalRevenue = commodity.price * quantity * priceMultiplier;
     const avgBuyPrice = player.commodities[commodity.id].avgBuyPrice;
     const costOfGoodsSold = avgBuyPrice * quantity;
     const profit = totalRevenue - costOfGoodsSold;
+    const profitPercentage = (profit / costOfGoodsSold) * 100;
 
     const newPlayerState = { ...player };
     newPlayerState.money += totalRevenue;
+
+    // Calculate influence change
+    let influenceChange = 0;
+    let influenceMsg = '';
+
+    if (isStopLoss) {
+        // Successfully using stop loss is seen as savvy risk management
+        influenceChange = INFLUENCE_CHANGES.SUCCESSFUL_STOP_LOSS;
+        influenceMsg = ` [Savvy risk management: +${influenceChange} Influence]`;
+    } else if (profit > 0 && profitPercentage > 20) {
+        // Large quick profit seen as greedy
+        influenceChange = INFLUENCE_CHANGES.LARGE_PROFIT_QUICK_TRADE;
+        influenceMsg = ` [Quick profit seen as greedy: ${influenceChange} Influence]`;
+    }
+
+    if (influenceChange !== 0) {
+        newPlayerState.influence = Math.max(MIN_INFLUENCE, Math.min(MAX_INFLUENCE, player.influence + influenceChange));
+    }
+
     newPlayerState.commodities = {
         ...newPlayerState.commodities,
         [commodity.id]: { ...newPlayerState.commodities[commodity.id], quantity: currentOwned - quantity }
@@ -185,12 +375,13 @@ export const attemptSellCommodity = (
     if (newPlayerState.commodities[commodity.id].quantity === 0) {
         delete newPlayerState.commodities[commodity.id]; // Clean up if zero quantity
     }
-    
+
     const profitLossMsg = profit >= 0 ? `Profit: $${profit.toFixed(2)}` : `Loss: $${Math.abs(profit).toFixed(2)}`;
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}`, 'success'),
-        success: true
+    return {
+        player: newPlayerState,
+        log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}${influenceMsg}`, 'success'),
+        success: true,
+        influenceChange
     };
 };
 
@@ -217,23 +408,33 @@ export const attemptBuyProperty = (
 };
 
 export const attemptUnlockSkill = (
-    player: Player, 
+    player: Player,
     skill: Skill
 ): { player?: Player, log?: LogEntry, success: boolean } => {
-    if (player.money < skill.cost) {
-        return { log: createLog(`Not enough money to learn ${skill.name}. Need $${skill.cost.toFixed(2)}.`, 'error'), success: false };
+    // High influence grants skill discounts
+    let costMultiplier = 1;
+    let discountMsg = '';
+    if (player.influence >= 50) {
+        costMultiplier = 0.85; // 15% discount for high influence
+        discountMsg = ' (15% High Influence discount applied!)';
+    }
+
+    const actualCost = skill.cost * costMultiplier;
+
+    if (player.money < actualCost) {
+        return { log: createLog(`Not enough money to learn ${skill.name}. Need $${actualCost.toFixed(2)}.`, 'error'), success: false };
     }
     if (player.skills.includes(skill.id)) {
         return { log: createLog(`You already know ${skill.name}.`, 'warning'), success: false };
     }
 
     const newPlayerState = { ...player };
-    newPlayerState.money -= skill.cost;
+    newPlayerState.money -= actualCost;
     newPlayerState.skills = [...newPlayerState.skills, skill.id];
-    
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Unlocked skill: ${skill.name} for $${skill.cost.toFixed(2)}.`, 'success'),
+
+    return {
+        player: newPlayerState,
+        log: createLog(`Unlocked skill: ${skill.name} for $${actualCost.toFixed(2)}${discountMsg}.`, 'success'),
         success: true
     };
 };
@@ -364,9 +565,11 @@ export const processPendingOrders = (
       if (order.type === 'LIMIT_BUY') {
         result = attemptBuyCommodity(tempPlayer, commodity, order.quantity, skills);
       } else {
-        result = attemptSellCommodity(tempPlayer, commodity, order.quantity, skills);
+        // Pass isStopLoss flag to track savvy risk management
+        const isStopLoss = order.type === 'STOP_LOSS_SELL';
+        result = attemptSellCommodity(tempPlayer, commodity, order.quantity, skills, isStopLoss);
       }
-      
+
       if (result.success && result.player) {
         tempPlayer = result.player;
         tempLogs.push(createLog(`Order executed: ${order.type.replace('_', ' ')} ${order.quantity} ${commodity.name} at $${commodity.price.toFixed(2)}.`, 'success'));

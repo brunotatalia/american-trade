@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Player, Commodity, Property, Skill, GameEvent, Era, LogEntry, GameState, ActiveView, Order
 } from './types';
-import { 
-  INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
+import {
+  INITIAL_PLAYER_INFLUENCE, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
     player: {
       money: 0,
-      reputation: INITIAL_PLAYER_REPUTATION,
+      influence: INITIAL_PLAYER_INFLUENCE,
       commodities: {},
       properties: [],
       skills: [],
@@ -103,13 +103,27 @@ const App: React.FC = () => {
         if(latestNewsItem) newLogs.push(GameLogic.createLog(`News: ${latestNewsItem}`, 'info'));
       }
 
-      // Attempt to trigger a random event
+      // Attempt to trigger influence-based special events or random events
       let newEvent: GameEvent | null = null;
       if (!gameState.currentEvent) { // Only trigger new event if no active event
           const tempGameState = {...gameState, player: newPlayerState, commodities: updatedCommodities};
-          newEvent = await GameLogic.createRandomGameEvent(tempGameState);
-          if (newEvent) {
-            newLogs.push(GameLogic.createLog(`Event: ${newEvent.title} - ${newEvent.description}`, 'event'));
+
+          // Check for influence-based special events first
+          const secEvent = GameLogic.createSECInvestigationEvent(tempGameState);
+          const blueChipEvent = GameLogic.createBlueChipOpportunityEvent(tempGameState);
+
+          if (secEvent) {
+            newEvent = secEvent;
+            newLogs.push(GameLogic.createLog(`[SPECIAL EVENT] ${secEvent.title} - ${secEvent.description}`, 'event'));
+          } else if (blueChipEvent) {
+            newEvent = blueChipEvent;
+            newLogs.push(GameLogic.createLog(`[SPECIAL EVENT] ${blueChipEvent.title} - ${blueChipEvent.description}`, 'event'));
+          } else {
+            // Fall back to regular random events
+            newEvent = await GameLogic.createRandomGameEvent(tempGameState);
+            if (newEvent) {
+              newLogs.push(GameLogic.createLog(`Event: ${newEvent.title} - ${newEvent.description}`, 'event'));
+            }
           }
       }
       

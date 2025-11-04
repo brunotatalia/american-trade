@@ -1,35 +1,72 @@
 
 import React from 'react';
 import { Player, Commodity, Property, Skill, GameState } from '../types';
-import { MoneyIcon, ReputationIcon, CommodityIcon, PropertyIcon, SkillIcon, InfoIcon, TrendUpIcon, TrendDownIcon } from './icons';
+import {
+  MoneyIcon, CommodityIcon, PropertyIcon, SkillIcon, InfoIcon, TrendUpIcon, TrendDownIcon,
+  InfluenceIconicIcon, InfluencePositiveIcon, InfluenceNeutralIcon, InfluenceNegativeIcon, InfluenceNotoriousIcon
+} from './icons';
 import { Card } from './ui/Card';
+import { INFLUENCE_LEVELS } from '../constants';
 
 interface DashboardProps {
   gameState: GameState;
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode, subtext?: string }> = ({ title, value, icon, subtext }) => (
+const StatCard: React.FC<{
+  title: string;
+  value: string | number;
+  icon: React.ReactNode,
+  subtext?: string;
+  valueColor?: string;
+}> = ({ title, value, icon, subtext, valueColor }) => (
   <Card className="flex-1 min-w-[150px]">
     <div className="flex items-center space-x-3">
       <div className="p-2 bg-gray-700 rounded-full">{icon}</div>
       <div>
         <p className="text-xs text-gray-400">{title}</p>
-        <p className="text-xl font-bold text-gray-100">{value}</p>
+        <p className={`text-xl font-bold ${valueColor || 'text-gray-100'}`}>{value}</p>
         {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
       </div>
     </div>
   </Card>
 );
 
+const getInfluenceLevel = (influence: number) => {
+  if (influence >= INFLUENCE_LEVELS.ICONIC.min) return INFLUENCE_LEVELS.ICONIC;
+  if (influence >= INFLUENCE_LEVELS.RESPECTED.min) return INFLUENCE_LEVELS.RESPECTED;
+  if (influence >= INFLUENCE_LEVELS.FAVORABLE.min) return INFLUENCE_LEVELS.FAVORABLE;
+  if (influence >= INFLUENCE_LEVELS.NEUTRAL.min) return INFLUENCE_LEVELS.NEUTRAL;
+  if (influence >= INFLUENCE_LEVELS.QUESTIONABLE.min) return INFLUENCE_LEVELS.QUESTIONABLE;
+  return INFLUENCE_LEVELS.NOTORIOUS;
+};
+
+const getInfluenceIcon = (influence: number) => {
+  const level = getInfluenceLevel(influence);
+  if (influence >= 75) return <InfluenceIconicIcon className={level.color} />;
+  if (influence >= 25) return <InfluencePositiveIcon className={level.color} />;
+  if (influence >= -24) return <InfluenceNeutralIcon className={level.color} />;
+  if (influence >= -49) return <InfluenceNegativeIcon className={level.color} />;
+  return <InfluenceNotoriousIcon className={level.color} />;
+};
+
 
 export const Dashboard: React.FC<DashboardProps> = ({ gameState }) => {
   const { player, commodities, properties, skills, gameTurn, currentEra } = gameState;
+
+  const influenceLevel = getInfluenceLevel(player.influence);
+  const influenceIcon = getInfluenceIcon(player.influence);
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-wrap gap-4 mb-4">
         <StatCard title="Money" value={`$${player.money.toLocaleString()}`} icon={<MoneyIcon className="text-green-400"/>} />
-        <StatCard title="Reputation" value={player.reputation} icon={<ReputationIcon className="text-blue-400"/>} />
+        <StatCard
+          title="Influence"
+          value={player.influence}
+          icon={influenceIcon}
+          valueColor={influenceLevel.color}
+          subtext={influenceLevel.label}
+        />
         <StatCard title="Game Turn" value={gameTurn} icon={<InfoIcon className="text-yellow-400"/>} subtext={currentEra?.name || ''} />
       </div>
 
