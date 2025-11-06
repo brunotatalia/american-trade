@@ -72,73 +72,77 @@ const App: React.FC = () => {
     if (!gameState.gameStarted || !gameState.currentEra) return;
 
     const tick = async () => {
-      setGameState(prev => ({ ...prev, isLoadingEvent: true })); // Signal loading for news/event
+      setGameState(prev => {
+        // Use prev state instead of stale gameState closure
+        const updatedCommodities = GameLogic.updateMarketPrices(prev.commodities, prev.currentEra!, prev.player.skills);
+        const income = GameLogic.calculatePlayerIncome(prev.player, prev.properties, prev.skills, updatedCommodities);
 
-      const updatedCommodities = GameLogic.updateMarketPrices(gameState.commodities, gameState.currentEra!, gameState.player.skills);
-      const income = GameLogic.calculatePlayerIncome(gameState.player, gameState.properties, gameState.skills, updatedCommodities);
+        let newPlayerState = { ...prev.player, money: prev.player.money + income };
+        let newLogs: LogEntry[] = [];
 
-      let newPlayerState = { ...gameState.player, money: gameState.player.money + income };
-      let newLogs: LogEntry[] = [];
+        if (income > 0) {
+          newLogs.push(GameLogic.createLog(`Earned $${income.toFixed(2)} from investments.`, 'success'));
+        } else if (income < 0) {
+          newLogs.push(GameLogic.createLog(`Lost $${Math.abs(income).toFixed(2)} from property maintenance.`, 'warning'));
+        }
 
-      if (income > 0) {
-        newLogs.push(GameLogic.createLog(`Earned $${income.toFixed(2)} from investments.`, 'success'));
-      } else if (income < 0) {
-        newLogs.push(GameLogic.createLog(`Lost $${Math.abs(income).toFixed(2)} from property maintenance.`, 'warning'));
-      }
+        // Update property values (appreciation)
+        newPlayerState = GameLogic.updatePropertyValues(newPlayerState, prev.properties, prev.player.skills);
 
-      // Update property values (appreciation)
-      newPlayerState = GameLogic.updatePropertyValues(newPlayerState, gameState.properties, gameState.player.skills);
+        // Process pending orders
+        const { player: playerAfterOrders, logs: orderLogs } = GameLogic.processPendingOrders(
+          newPlayerState,
+          updatedCommodities,
+          prev.player.skills,
+          prev.gameTurn
+        );
+        newPlayerState = playerAfterOrders;
+        if (orderLogs.length > 0) {
+            newLogs.push(...orderLogs);
+        }
 
-      // Process pending orders
-      const { player: playerAfterOrders, logs: orderLogs } = GameLogic.processPendingOrders(
-        newPlayerState,
-        updatedCommodities,
-        gameState.player.skills,
-        gameState.gameTurn
-      );
-      newPlayerState = playerAfterOrders;
-      if (orderLogs.length > 0) {
-          newLogs.push(...orderLogs);
-      }
+        return {
+          ...prev,
+          player: {
+            ...newPlayerState,
+            money: parseFloat(newPlayerState.money.toFixed(2)),
+          },
+          commodities: updatedCommodities,
+          gameLog: [...prev.gameLog, ...newLogs].slice(-MAX_LOG_ENTRIES),
+          gameTurn: prev.gameTurn + 1,
+          isLoadingEvent: false,
+        };
+      });
 
-
-      // Fetch market news (50% chance each turn)
-      let latestNewsItem: string | null = null;
+      // Fetch market news async (50% chance each turn)
       if (Math.random() < 0.5) {
-        latestNewsItem = await GameLogic.fetchMarketNewsForRandomCommodity(gameState);
-        if(latestNewsItem) newLogs.push(GameLogic.createLog(`News: ${latestNewsItem}`, 'info'));
+        const latestNewsItem = await GameLogic.fetchMarketNewsForRandomCommodity(gameState);
+        if(latestNewsItem) {
+          setGameState(prev => ({
+            ...prev,
+            gameLog: [...prev.gameLog, GameLogic.createLog(`News: ${latestNewsItem}`, 'info')].slice(-MAX_LOG_ENTRIES),
+            marketNews: [latestNewsItem, ...prev.marketNews].slice(0, 10)
+          }));
+        }
       }
 
       // Attempt to trigger a random event
-      let newEvent: GameEvent | null = null;
-      if (!gameState.currentEvent) { // Only trigger new event if no active event
-          const tempGameState = {...gameState, player: newPlayerState, commodities: updatedCommodities};
-          newEvent = await GameLogic.createRandomGameEvent(tempGameState);
-          if (newEvent) {
-            newLogs.push(GameLogic.createLog(`Event: ${newEvent.title} - ${newEvent.description}`, 'event'));
-          }
+      if (!gameState.currentEvent) {
+        const newEvent = await GameLogic.createRandomGameEvent(gameState);
+        if (newEvent) {
+          setGameState(prev => ({
+            ...prev,
+            currentEvent: newEvent,
+            gameLog: [...prev.gameLog, GameLogic.createLog(`Event: ${newEvent.title}`, 'event')].slice(-MAX_LOG_ENTRIES)
+          }));
+        }
       }
-      
-      setGameState(prev => ({
-        ...prev,
-        player: {
-          ...prev.player,
-          ...newPlayerState,
-          money: parseFloat(newPlayerState.money.toFixed(2)),
-        },
-        commodities: updatedCommodities,
-        currentEvent: newEvent || prev.currentEvent, // Keep existing event if new one is null
-        gameLog: [...prev.gameLog, ...newLogs].slice(-MAX_LOG_ENTRIES),
-        gameTurn: prev.gameTurn + 1,
-        isLoadingEvent: false,
-        marketNews: latestNewsItem ? [latestNewsItem, ...prev.marketNews].slice(0, 10) : prev.marketNews,
-      }));
     };
 
     const intervalId = setInterval(tick, GAME_TICK_INTERVAL_MS);
     return () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.gameStarted, gameState.gameTurn]); // Dependencies carefully chosen for game tick logic
+  }, [gameState.gameStarted]); // Only depend on gameStarted, not gameTurn
 
 
   const handleBuyCommodity = useCallback((commodityId: string, quantity: number) => {
