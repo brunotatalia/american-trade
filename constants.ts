@@ -1,5 +1,5 @@
 
-import { Commodity, Property, Skill, Era } from './types';
+import { Commodity, Property, Skill, Era, Job } from './types';
 import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, ReputationIcon, TrendUpIcon, TrendDownIcon, InfoIcon, NewsIcon } from './components/icons';
 import React from 'react';
 
@@ -601,3 +601,206 @@ export const ERAS_DATA: Era[] = [
     availableSkills: ['BASIC_NEGOTIATION', 'ADVANCED_NEGOTIATION', 'MARKET_ANALYSIS', 'TECHNICAL_ANALYSIS', 'REAL_ESTATE_MGMT', 'PROPERTY_DEVELOPMENT', 'RISK_MANAGEMENT', 'TAX_OPTIMIZATION', 'DIVERSIFICATION', 'NETWORKING', 'FINANCIAL_LITERACY']
   }
 ];
+
+export const JOBS_DATA: Record<string, Job> = {
+  // White Collar - Entry Level
+  DATA_ENTRY_CLERK: {
+    id: 'DATA_ENTRY_CLERK',
+    title: 'Data Entry Clerk',
+    category: 'white_collar',
+    basePayPerTurn: 150,
+    requiredSkills: [],
+    description: "Enter data quickly and accurately. Speed and precision matter.",
+    miniGameType: 'data_entry',
+    difficulty: 'easy',
+    icon: React.createElement(SkillIcon, {className: "text-gray-400"})
+  },
+  CUSTOMER_SERVICE_REP: {
+    id: 'CUSTOMER_SERVICE_REP',
+    title: 'Customer Service Representative',
+    category: 'service',
+    basePayPerTurn: 180,
+    requiredSkills: [],
+    description: "Handle customer inquiries and resolve issues. Pattern recognition required.",
+    miniGameType: 'pattern_match',
+    difficulty: 'easy',
+    icon: React.createElement(SkillIcon, {className: "text-blue-300"})
+  },
+
+  // White Collar - Mid Level
+  ACCOUNTANT: {
+    id: 'ACCOUNTANT',
+    title: 'Junior Accountant',
+    category: 'white_collar',
+    basePayPerTurn: 350,
+    requiredSkills: ['FINANCIAL_LITERACY'],
+    description: "Balance accounts and perform financial calculations. Math skills essential.",
+    miniGameType: 'math_quiz',
+    difficulty: 'medium',
+    icon: React.createElement(MoneyIcon, {className: "text-green-500"})
+  },
+  FINANCIAL_ANALYST: {
+    id: 'FINANCIAL_ANALYST',
+    title: 'Financial Analyst',
+    category: 'white_collar',
+    basePayPerTurn: 500,
+    requiredSkills: ['FINANCIAL_LITERACY', 'MARKET_ANALYSIS'],
+    description: "Analyze market data and make recommendations. Advanced pattern recognition.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(TrendUpIcon, {className: "text-cyan-500"})
+  },
+  BUSINESS_CONSULTANT: {
+    id: 'BUSINESS_CONSULTANT',
+    title: 'Business Consultant',
+    category: 'management',
+    basePayPerTurn: 650,
+    requiredSkills: ['ADVANCED_NEGOTIATION', 'NETWORKING'],
+    description: "Solve complex business problems. Strategic thinking required.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-purple-500"})
+  },
+
+  // Tech Jobs
+  IT_SUPPORT: {
+    id: 'IT_SUPPORT',
+    title: 'IT Support Specialist',
+    category: 'tech',
+    basePayPerTurn: 280,
+    requiredSkills: [],
+    description: "Troubleshoot technical issues. Pattern matching and problem solving.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-indigo-400"})
+  },
+  SOFTWARE_DEVELOPER: {
+    id: 'SOFTWARE_DEVELOPER',
+    title: 'Software Developer',
+    category: 'tech',
+    basePayPerTurn: 550,
+    requiredSkills: ['TECHNICAL_ANALYSIS'],
+    description: "Write code and debug programs. Logic puzzles and pattern recognition.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-blue-600"})
+  },
+  DATA_SCIENTIST: {
+    id: 'DATA_SCIENTIST',
+    title: 'Data Scientist',
+    category: 'tech',
+    basePayPerTurn: 750,
+    requiredSkills: ['TECHNICAL_ANALYSIS', 'MARKET_ANALYSIS'],
+    description: "Analyze complex datasets. Advanced math and pattern recognition.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(TrendUpIcon, {className: "text-purple-600"})
+  },
+
+  // Blue Collar - Entry Level
+  WAREHOUSE_WORKER: {
+    id: 'WAREHOUSE_WORKER',
+    title: 'Warehouse Worker',
+    category: 'blue_collar',
+    basePayPerTurn: 200,
+    requiredSkills: [],
+    description: "Load and organize cargo efficiently. Spatial awareness required.",
+    miniGameType: 'cargo_load',
+    difficulty: 'easy',
+    icon: React.createElement(PropertyIcon, {className: "text-orange-400"})
+  },
+  DELIVERY_DRIVER: {
+    id: 'DELIVERY_DRIVER',
+    title: 'Delivery Driver',
+    category: 'blue_collar',
+    basePayPerTurn: 220,
+    requiredSkills: [],
+    description: "Plan efficient delivery routes. Time management critical.",
+    miniGameType: 'delivery_route',
+    difficulty: 'medium',
+    icon: React.createElement(PropertyIcon, {className: "text-yellow-500"})
+  },
+  FACTORY_WORKER: {
+    id: 'FACTORY_WORKER',
+    title: 'Assembly Line Worker',
+    category: 'blue_collar',
+    basePayPerTurn: 240,
+    requiredSkills: [],
+    description: "Maintain production pace on assembly line. Timing is everything.",
+    miniGameType: 'assembly_line',
+    difficulty: 'medium',
+    icon: React.createElement(PropertyIcon, {className: "text-gray-500"})
+  },
+
+  // Blue Collar - Skilled
+  FORKLIFT_OPERATOR: {
+    id: 'FORKLIFT_OPERATOR',
+    title: 'Forklift Operator',
+    category: 'blue_collar',
+    basePayPerTurn: 320,
+    requiredSkills: ['REAL_ESTATE_MGMT'], // represents management/organization skills
+    description: "Operate heavy machinery to move cargo. Precision and speed required.",
+    miniGameType: 'cargo_load',
+    difficulty: 'hard',
+    icon: React.createElement(PropertyIcon, {className: "text-orange-600"})
+  },
+  LOGISTICS_COORDINATOR: {
+    id: 'LOGISTICS_COORDINATOR',
+    title: 'Logistics Coordinator',
+    category: 'blue_collar',
+    basePayPerTurn: 400,
+    requiredSkills: ['DIVERSIFICATION'], // represents multi-tasking
+    description: "Coordinate complex delivery schedules. Multi-tasking essential.",
+    miniGameType: 'delivery_route',
+    difficulty: 'hard',
+    icon: React.createElement(PropertyIcon, {className: "text-yellow-700"})
+  },
+
+  // Management
+  OPERATIONS_MANAGER: {
+    id: 'OPERATIONS_MANAGER',
+    title: 'Operations Manager',
+    category: 'management',
+    basePayPerTurn: 600,
+    requiredSkills: ['ADVANCED_NEGOTIATION', 'REAL_ESTATE_MGMT'],
+    description: "Oversee production operations. Strategic planning and execution.",
+    miniGameType: 'assembly_line',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-purple-600"})
+  },
+  SENIOR_MANAGER: {
+    id: 'SENIOR_MANAGER',
+    title: 'Senior Manager',
+    category: 'management',
+    basePayPerTurn: 850,
+    requiredSkills: ['ADVANCED_NEGOTIATION', 'NETWORKING', 'DIVERSIFICATION'],
+    description: "Lead teams and make critical decisions. All skills tested.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-gold-600"})
+  },
+
+  // Service Industry
+  RESTAURANT_SERVER: {
+    id: 'RESTAURANT_SERVER',
+    title: 'Restaurant Server',
+    category: 'service',
+    basePayPerTurn: 160,
+    requiredSkills: [],
+    description: "Take orders and serve customers quickly. Speed and accuracy.",
+    miniGameType: 'data_entry',
+    difficulty: 'easy',
+    icon: React.createElement(PropertyIcon, {className: "text-red-400"})
+  },
+  RETAIL_MANAGER: {
+    id: 'RETAIL_MANAGER',
+    title: 'Retail Store Manager',
+    category: 'management',
+    basePayPerTurn: 420,
+    requiredSkills: ['NETWORKING'],
+    description: "Manage store operations and staff. People skills required.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-blue-500"})
+  }
+};

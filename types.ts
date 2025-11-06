@@ -11,6 +11,68 @@ export interface Order {
   createdAtTurn: number;
 }
 
+export interface Job {
+  id: string;
+  title: string;
+  category: 'white_collar' | 'blue_collar' | 'service' | 'tech' | 'management';
+  basePayPerTurn: number;
+  requiredSkills: string[];
+  description: string;
+  miniGameType: 'math_quiz' | 'pattern_match' | 'data_entry' | 'cargo_load' | 'assembly_line' | 'delivery_route';
+  difficulty: 'easy' | 'medium' | 'hard';
+  icon?: React.ReactNode;
+}
+
+export interface JobPerformance {
+  jobId: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  averageScore: number;
+  bestScore: number;
+  totalEarnings: number;
+  streak: number; // consecutive wins
+}
+
+export interface MiniGameResult {
+  score: number;
+  passed: boolean;
+  earnings: number;
+  performanceRating: 'poor' | 'average' | 'good' | 'excellent';
+}
+
+export interface OptionsContract {
+  id: string;
+  commodityId: string;
+  type: 'CALL' | 'PUT';
+  strikePrice: number;
+  premium: number; // cost to buy the option
+  expirationTurn: number;
+  quantity: number;
+  purchasedAtTurn: number;
+}
+
+export interface LeveragedPosition {
+  id: string;
+  commodityId: string;
+  type: 'LONG' | 'SHORT';
+  leverage: number; // 2x, 5x, 10x
+  entryPrice: number;
+  quantity: number;
+  margin: number; // initial margin requirement
+  currentValue: number;
+  liquidationPrice: number;
+  openedAtTurn: number;
+}
+
+export interface PriceHistory {
+  turn: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
 export interface Player {
   money: number;
   reputation: number;
@@ -18,6 +80,11 @@ export interface Player {
   properties: Record<string, { purchasedTurn: number; currentValue: number }>; // Property ID -> purchase info
   skills: string[]; // IDs of unlocked skills
   orders: Order[];
+  currentJob: string | null; // Job ID
+  jobPerformance: Record<string, JobPerformance>; // Job ID -> performance stats
+  optionsContracts: OptionsContract[];
+  leveragedPositions: LeveragedPosition[];
+  tradingLevel: number; // Unlocks more leverage options
 }
 
 export interface Commodity {
@@ -83,12 +150,15 @@ export interface GameState {
   commodities: Record<string, Commodity>;
   properties: Record<string, Property>;
   skills: Record<string, Skill>;
+  jobs: Record<string, Job>;
   gameLog: LogEntry[];
   currentEvent: GameEvent | null;
   gameTurn: number;
   gameStarted: boolean;
   isLoadingEvent: boolean;
   marketNews: string[];
+  priceHistory: Record<string, PriceHistory[]>; // Commodity ID -> price history
+  activeMiniGame: { jobId: string; type: string } | null;
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'NEWS';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'NEWS';
