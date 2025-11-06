@@ -37,14 +37,17 @@ export const LogView: React.FC<LogViewProps> = ({ logs }) => {
     }
   };
 
+  // Only show last 2 logs
+  const recentLogs = logs.slice(-2);
+
   return (
-    <div className="h-48 bg-gray-800 p-3 rounded-b-lg shadow-inner overflow-y-auto" ref={logContainerRef}>
-      <ul className="space-y-1.5 text-xs">
-        {logs.map((log, index) => (
-          <li key={index} className={`flex items-start ${getLogColor(log.type)}`}>
-            <span className="mr-1.5 mt-0.5 shrink-0"><LogIcon type={log.type} /></span>
-            <span className="font-mono text-gray-500 mr-1.5">[{log.timestamp.toLocaleTimeString()}]</span>
-            <span>{log.message}</span>
+    <div className="bg-gray-800 p-2 border-t border-gray-700 overflow-hidden" style={{maxHeight: '60px'}}>
+      <ul className="space-y-0.5 text-xs">
+        {recentLogs.map((log, index) => (
+          <li key={index} className={`flex items-center ${getLogColor(log.type)} truncate`}>
+            <span className="mr-1 shrink-0"><LogIcon type={log.type} /></span>
+            <span className="font-mono text-gray-500 mr-1.5 text-[10px]">[{log.timestamp.toLocaleTimeString()}]</span>
+            <span className="truncate">{log.message}</span>
           </li>
         ))}
       </ul>
