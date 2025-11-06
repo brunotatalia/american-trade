@@ -76,7 +76,7 @@ export const DeliveryRoute: React.FC<DeliveryRouteProps> = ({ difficulty, basePa
     if (loc.visited || feedback) return;
 
     const dist = calculateDistance(currentPos, loc);
-    setDistance(distance + dist);
+    const newDistance = distance + dist;
     setCurrentPos({ x: loc.x, y: loc.y });
     setRoute([...route, loc.id]);
 
@@ -86,10 +86,13 @@ export const DeliveryRoute: React.FC<DeliveryRouteProps> = ({ difficulty, basePa
     setLocations(newLocations);
 
     if (newLocations.every(l => l.visited)) {
-      // All locations visited
+      // All locations visited - add return distance to warehouse
       const returnDist = calculateDistance(loc, { x: 0, y: 0 });
-      setDistance(distance + dist + returnDist);
+      setDistance(newDistance + returnDist);
       setTimeout(() => finishRound(), 500);
+    } else {
+      // Not done yet, just update distance
+      setDistance(newDistance);
     }
   };
 

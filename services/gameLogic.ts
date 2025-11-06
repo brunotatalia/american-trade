@@ -15,7 +15,7 @@ import {
   MARKET_DEPTH_IMPACT_THRESHOLD,
   MAX_SLIPPAGE_PERCENT
 } from '../constants';
-import { generateGameEventDescription, generateMarketNews } from './geminiService';
+import { generateGameEventDescription, generateMarketNews, isGeminiAvailable } from './geminiService';
 
 export const updateMarketPrices = (
     commodities: Record<string, Commodity>,
@@ -153,6 +153,10 @@ export const updatePropertyValues = (
 
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
+
+  // Don't create events if Gemini is not available
+  if (!isGeminiAvailable()) return null;
+
   // Simple chance to trigger an event
   if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
     return null;

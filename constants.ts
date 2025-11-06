@@ -566,6 +566,194 @@ export const SKILLS_DATA: Record<string, Skill> = {
     description: "Deep understanding of financial markets and instruments.",
     effectDescription: "Unlocks detailed market information and analytics.",
     icon: React.createElement(SkillIcon, {className: "text-blue-500"})
+  },
+  LEADERSHIP: {
+    id: 'LEADERSHIP',
+    name: 'Leadership',
+    cost: 7000,
+    description: "Inspire and lead teams to achieve greater success.",
+    effectDescription: "+25% earnings from jobs. Unlocks management positions.",
+    icon: React.createElement(SkillIcon, {className: "text-amber-500"})
+  },
+  TIME_MANAGEMENT: {
+    id: 'TIME_MANAGEMENT',
+    name: 'Time Management',
+    cost: 2500,
+    description: "Maximize productivity through efficient time allocation.",
+    effectDescription: "+10% faster trading execution. Reduced cooldowns.",
+    icon: React.createElement(SkillIcon, {className: "text-teal-400"})
+  },
+
+  // Accounting & Finance Skills
+  ACCOUNTING_BASICS: {
+    id: 'ACCOUNTING_BASICS',
+    name: 'Accounting Basics',
+    cost: 1800,
+    description: "Understand balance sheets and financial statements.",
+    effectDescription: "Better visibility into profit/loss. Track performance.",
+    icon: React.createElement(SkillIcon, {className: "text-emerald-400"})
+  },
+  ADVANCED_ACCOUNTING: {
+    id: 'ADVANCED_ACCOUNTING',
+    name: 'Advanced Accounting',
+    cost: 5500,
+    description: "Master complex accounting principles and tax strategies.",
+    effectDescription: "Additional 20% tax reduction. Better expense tracking.",
+    icon: React.createElement(SkillIcon, {className: "text-emerald-600"})
+  },
+  LEGAL_KNOWLEDGE: {
+    id: 'LEGAL_KNOWLEDGE',
+    name: 'Legal Knowledge',
+    cost: 4500,
+    description: "Understand contracts, regulations, and legal frameworks.",
+    effectDescription: "Avoid legal penalties. Better contract terms.",
+    icon: React.createElement(SkillIcon, {className: "text-slate-400"})
+  },
+
+  // Marketing & Sales
+  MARKETING_EXPERTISE: {
+    id: 'MARKETING_EXPERTISE',
+    name: 'Marketing Expertise',
+    cost: 3500,
+    description: "Promote properties and businesses effectively.",
+    effectDescription: "+20% rental income. Faster property sales.",
+    icon: React.createElement(SkillIcon, {className: "text-fuchsia-400"})
+  },
+  PSYCHOLOGY: {
+    id: 'PSYCHOLOGY',
+    name: 'Psychology',
+    cost: 4000,
+    description: "Understand human behavior and decision-making.",
+    effectDescription: "+10% negotiation bonus. Better event choices.",
+    icon: React.createElement(SkillIcon, {className: "text-violet-400"})
+  },
+
+  // Tech & Data Skills
+  DATA_SCIENCE: {
+    id: 'DATA_SCIENCE',
+    name: 'Data Science',
+    cost: 8500,
+    description: "Use big data and algorithms for market predictions.",
+    effectDescription: "Predictive analytics. See future price trends.",
+    icon: React.createElement(SkillIcon, {className: "text-sky-500"})
+  },
+  PROGRAMMING: {
+    id: 'PROGRAMMING',
+    name: 'Programming',
+    cost: 3000,
+    description: "Build automated trading systems and tools.",
+    effectDescription: "Automated trading bots. Faster execution.",
+    icon: React.createElement(SkillIcon, {className: "text-lime-500"})
+  },
+  CYBERSECURITY: {
+    id: 'CYBERSECURITY',
+    name: 'Cybersecurity',
+    cost: 5000,
+    description: "Protect assets from digital threats and fraud.",
+    effectDescription: "Prevents theft and fraud events. Secure transactions.",
+    icon: React.createElement(SkillIcon, {className: "text-red-600"})
+  },
+
+  // Advanced Trading Skills
+  ENTREPRENEURSHIP: {
+    id: 'ENTREPRENEURSHIP',
+    name: 'Entrepreneurship',
+    cost: 10000,
+    description: "Start and grow your own businesses.",
+    effectDescription: "Unlocks business ownership. Passive income streams.",
+    icon: React.createElement(SkillIcon, {className: "text-yellow-500"})
+  },
+  INTERNATIONAL_TRADE: {
+    id: 'INTERNATIONAL_TRADE',
+    name: 'International Trade',
+    cost: 12000,
+    description: "Access global markets and foreign investments.",
+    effectDescription: "Unlocks international assets. Currency arbitrage.",
+    icon: React.createElement(SkillIcon, {className: "text-blue-600"})
+  },
+  CRYPTOCURRENCY_EXPERT: {
+    id: 'CRYPTOCURRENCY_EXPERT',
+    name: 'Cryptocurrency Expert',
+    cost: 6500,
+    description: "Master blockchain technology and crypto trading.",
+    effectDescription: "Better crypto returns. Lower crypto fees.",
+    icon: React.createElement(SkillIcon, {className: "text-orange-500"})
+  },
+  STOCK_PICKING: {
+    id: 'STOCK_PICKING',
+    name: 'Stock Picking',
+    cost: 5500,
+    description: "Identify undervalued stocks for maximum returns.",
+    effectDescription: "+15% stock trading profits. Better stock insights.",
+    icon: React.createElement(SkillIcon, {className: "text-green-600"})
+  },
+  OPTIONS_TRADING_MASTERY: {
+    id: 'OPTIONS_TRADING_MASTERY',
+    name: 'Options Trading Mastery',
+    cost: 9000,
+    description: "Advanced options strategies and derivatives trading.",
+    effectDescription: "-30% options premiums. Better strike price calculations.",
+    icon: React.createElement(SkillIcon, {className: "text-purple-600"})
+  },
+  LEVERAGE_MASTERY: {
+    id: 'LEVERAGE_MASTERY',
+    name: 'Leverage Mastery',
+    cost: 11000,
+    description: "Use leverage safely for amplified returns.",
+    effectDescription: "Unlocks 20x leverage. Better margin management.",
+    icon: React.createElement(SkillIcon, {className: "text-rose-600"})
+  },
+
+  // Protection & Planning
+  INSURANCE_KNOWLEDGE: {
+    id: 'INSURANCE_KNOWLEDGE',
+    name: 'Insurance Knowledge',
+    cost: 4000,
+    description: "Protect investments with appropriate insurance coverage.",
+    effectDescription: "Reduces impact of disasters by 75%.",
+    icon: React.createElement(SkillIcon, {className: "text-cyan-600"})
+  },
+  ESTATE_PLANNING: {
+    id: 'ESTATE_PLANNING',
+    name: 'Estate Planning',
+    cost: 15000,
+    description: "Preserve and transfer wealth across generations.",
+    effectDescription: "Legacy bonuses. Reduced inheritance taxes.",
+    icon: React.createElement(SkillIcon, {className: "text-amber-600"})
+  },
+  FUNDRAISING: {
+    id: 'FUNDRAISING',
+    name: 'Fundraising',
+    cost: 7500,
+    description: "Raise capital from investors and lenders.",
+    effectDescription: "Access to loans with better interest rates.",
+    icon: React.createElement(SkillIcon, {className: "text-indigo-600"})
+  },
+
+  // Communication & Soft Skills
+  PUBLIC_SPEAKING: {
+    id: 'PUBLIC_SPEAKING',
+    name: 'Public Speaking',
+    cost: 2500,
+    description: "Communicate ideas persuasively to large audiences.",
+    effectDescription: "+15% reputation gain from positive actions.",
+    icon: React.createElement(SkillIcon, {className: "text-pink-500"})
+  },
+  CRITICAL_THINKING: {
+    id: 'CRITICAL_THINKING',
+    name: 'Critical Thinking',
+    cost: 3500,
+    description: "Analyze situations logically and make better decisions.",
+    effectDescription: "Avoid bad investments. Better risk assessment.",
+    icon: React.createElement(SkillIcon, {className: "text-slate-500"})
+  },
+  NEGOTIATION_MASTERY: {
+    id: 'NEGOTIATION_MASTERY',
+    name: 'Negotiation Mastery',
+    cost: 8000,
+    description: "Elite-level negotiation for the most complex deals.",
+    effectDescription: "8% better prices. Unlock exclusive opportunities.",
+    icon: React.createElement(SkillIcon, {className: "text-purple-700"})
   }
 };
 
@@ -802,5 +990,345 @@ export const JOBS_DATA: Record<string, Job> = {
     miniGameType: 'pattern_match',
     difficulty: 'medium',
     icon: React.createElement(SkillIcon, {className: "text-blue-500"})
+  },
+
+  // Additional White Collar Jobs
+  LOAN_OFFICER: {
+    id: 'LOAN_OFFICER',
+    title: 'Loan Officer',
+    category: 'white_collar',
+    basePayPerTurn: 450,
+    requiredSkills: ['FINANCIAL_LITERACY', 'ACCOUNTING_BASICS'],
+    description: "Evaluate loan applications and assess risk. Math and analysis required.",
+    miniGameType: 'math_quiz',
+    difficulty: 'medium',
+    icon: React.createElement(MoneyIcon, {className: "text-emerald-500"})
+  },
+  INVESTMENT_BANKER: {
+    id: 'INVESTMENT_BANKER',
+    title: 'Investment Banker',
+    category: 'white_collar',
+    basePayPerTurn: 950,
+    requiredSkills: ['ADVANCED_NEGOTIATION', 'MARKET_ANALYSIS', 'FINANCIAL_LITERACY'],
+    description: "Structure complex financial deals. Elite math and negotiation.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(TrendUpIcon, {className: "text-gold-600"})
+  },
+  INSURANCE_AGENT: {
+    id: 'INSURANCE_AGENT',
+    title: 'Insurance Agent',
+    category: 'white_collar',
+    basePayPerTurn: 320,
+    requiredSkills: ['BASIC_NEGOTIATION'],
+    description: "Sell insurance policies and assess coverage needs. Pattern matching.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-cyan-500"})
+  },
+  STOCK_BROKER: {
+    id: 'STOCK_BROKER',
+    title: 'Stock Broker',
+    category: 'white_collar',
+    basePayPerTurn: 650,
+    requiredSkills: ['MARKET_ANALYSIS', 'ADVANCED_NEGOTIATION'],
+    description: "Execute trades for clients. Fast decision making required.",
+    miniGameType: 'data_entry',
+    difficulty: 'hard',
+    icon: React.createElement(TrendUpIcon, {className: "text-green-600"})
+  },
+  BUSINESS_ANALYST: {
+    id: 'BUSINESS_ANALYST',
+    title: 'Business Analyst',
+    category: 'white_collar',
+    basePayPerTurn: 480,
+    requiredSkills: ['FINANCIAL_LITERACY', 'CRITICAL_THINKING'],
+    description: "Analyze business processes and recommend improvements.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-indigo-500"})
+  },
+  MARKETING_MANAGER: {
+    id: 'MARKETING_MANAGER',
+    title: 'Marketing Manager',
+    category: 'management',
+    basePayPerTurn: 580,
+    requiredSkills: ['MARKETING_EXPERTISE', 'NETWORKING'],
+    description: "Plan and execute marketing campaigns. Creative thinking.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-fuchsia-600"})
+  },
+  HR_MANAGER: {
+    id: 'HR_MANAGER',
+    title: 'Human Resources Manager',
+    category: 'management',
+    basePayPerTurn: 520,
+    requiredSkills: ['LEADERSHIP', 'PSYCHOLOGY'],
+    description: "Manage hiring and employee relations. People skills essential.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-pink-600"})
+  },
+  SALES_EXECUTIVE: {
+    id: 'SALES_EXECUTIVE',
+    title: 'Sales Executive',
+    category: 'white_collar',
+    basePayPerTurn: 550,
+    requiredSkills: ['ADVANCED_NEGOTIATION', 'PUBLIC_SPEAKING'],
+    description: "Close high-value deals. Master negotiation required.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(MoneyIcon, {className: "text-amber-600"})
+  },
+  TAX_CONSULTANT: {
+    id: 'TAX_CONSULTANT',
+    title: 'Tax Consultant',
+    category: 'white_collar',
+    basePayPerTurn: 620,
+    requiredSkills: ['ADVANCED_ACCOUNTING', 'TAX_OPTIMIZATION'],
+    description: "Optimize tax strategies for clients. Complex calculations.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-green-700"})
+  },
+
+  // Additional Blue Collar Jobs
+  ELECTRICIAN: {
+    id: 'ELECTRICIAN',
+    title: 'Electrician',
+    category: 'blue_collar',
+    basePayPerTurn: 380,
+    requiredSkills: [],
+    description: "Wire buildings and troubleshoot electrical systems. Pattern recognition.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-yellow-500"})
+  },
+  PLUMBER: {
+    id: 'PLUMBER',
+    title: 'Plumber',
+    category: 'blue_collar',
+    basePayPerTurn: 360,
+    requiredSkills: [],
+    description: "Install and repair plumbing systems. Spatial awareness needed.",
+    miniGameType: 'cargo_load',
+    difficulty: 'medium',
+    icon: React.createElement(PropertyIcon, {className: "text-blue-600"})
+  },
+  HVAC_TECHNICIAN: {
+    id: 'HVAC_TECHNICIAN',
+    title: 'HVAC Technician',
+    category: 'blue_collar',
+    basePayPerTurn: 400,
+    requiredSkills: [],
+    description: "Maintain heating and cooling systems. Technical skills required.",
+    miniGameType: 'assembly_line',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-sky-600"})
+  },
+  AUTO_MECHANIC: {
+    id: 'AUTO_MECHANIC',
+    title: 'Auto Mechanic',
+    category: 'blue_collar',
+    basePayPerTurn: 340,
+    requiredSkills: [],
+    description: "Diagnose and repair vehicles. Pattern matching essential.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-gray-600"})
+  },
+  FACTORY_OPERATOR: {
+    id: 'FACTORY_OPERATOR',
+    title: 'Factory Operator',
+    category: 'blue_collar',
+    basePayPerTurn: 240,
+    requiredSkills: [],
+    description: "Operate manufacturing equipment. Timing and precision.",
+    miniGameType: 'assembly_line',
+    difficulty: 'easy',
+    icon: React.createElement(SkillIcon, {className: "text-slate-500"})
+  },
+  PAINTER: {
+    id: 'PAINTER',
+    title: 'Professional Painter',
+    category: 'blue_collar',
+    basePayPerTurn: 300,
+    requiredSkills: [],
+    description: "Paint buildings and structures. Steady hands required.",
+    miniGameType: 'pattern_match',
+    difficulty: 'easy',
+    icon: React.createElement(SkillIcon, {className: "text-indigo-400"})
+  },
+  WELDER: {
+    id: 'WELDER',
+    title: 'Certified Welder',
+    category: 'blue_collar',
+    basePayPerTurn: 420,
+    requiredSkills: [],
+    description: "Join metal parts with precision. Focus and timing critical.",
+    miniGameType: 'assembly_line',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-orange-600"})
+  },
+  HEAVY_EQUIPMENT_OPERATOR: {
+    id: 'HEAVY_EQUIPMENT_OPERATOR',
+    title: 'Heavy Equipment Operator',
+    category: 'blue_collar',
+    basePayPerTurn: 460,
+    requiredSkills: [],
+    description: "Operate bulldozers and excavators. Spatial planning required.",
+    miniGameType: 'cargo_load',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-yellow-700"})
+  },
+
+  // Additional Service Jobs
+  HOTEL_MANAGER: {
+    id: 'HOTEL_MANAGER',
+    title: 'Hotel Manager',
+    category: 'service',
+    basePayPerTurn: 480,
+    requiredSkills: ['NETWORKING', 'MARKETING_EXPERTISE'],
+    description: "Oversee hotel operations and guest services. Multi-tasking essential.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(PropertyIcon, {className: "text-purple-500"})
+  },
+  EVENT_PLANNER: {
+    id: 'EVENT_PLANNER',
+    title: 'Event Planner',
+    category: 'service',
+    basePayPerTurn: 400,
+    requiredSkills: ['NETWORKING', 'TIME_MANAGEMENT'],
+    description: "Coordinate events and manage logistics. Organization key.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-pink-500"})
+  },
+  REAL_ESTATE_AGENT: {
+    id: 'REAL_ESTATE_AGENT',
+    title: 'Real Estate Agent',
+    category: 'service',
+    basePayPerTurn: 520,
+    requiredSkills: ['BASIC_NEGOTIATION', 'REAL_ESTATE_MGMT'],
+    description: "Buy and sell properties for clients. Sales and market knowledge.",
+    miniGameType: 'math_quiz',
+    difficulty: 'medium',
+    icon: React.createElement(PropertyIcon, {className: "text-orange-600"})
+  },
+  TRAVEL_AGENT: {
+    id: 'TRAVEL_AGENT',
+    title: 'Travel Agent',
+    category: 'service',
+    basePayPerTurn: 280,
+    requiredSkills: [],
+    description: "Plan trips and book travel arrangements. Organization required.",
+    miniGameType: 'data_entry',
+    difficulty: 'easy',
+    icon: React.createElement(SkillIcon, {className: "text-sky-500"})
+  },
+
+  // Additional Tech Jobs
+  NETWORK_ADMINISTRATOR: {
+    id: 'NETWORK_ADMINISTRATOR',
+    title: 'Network Administrator',
+    category: 'tech',
+    basePayPerTurn: 500,
+    requiredSkills: ['PROGRAMMING'],
+    description: "Maintain and secure computer networks. Technical problem solving.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-indigo-600"})
+  },
+  CYBERSECURITY_ANALYST: {
+    id: 'CYBERSECURITY_ANALYST',
+    title: 'Cybersecurity Analyst',
+    category: 'tech',
+    basePayPerTurn: 720,
+    requiredSkills: ['PROGRAMMING', 'CYBERSECURITY'],
+    description: "Protect systems from cyber threats. Advanced pattern recognition.",
+    miniGameType: 'pattern_match',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-red-700"})
+  },
+  UX_DESIGNER: {
+    id: 'UX_DESIGNER',
+    title: 'UX/UI Designer',
+    category: 'tech',
+    basePayPerTurn: 580,
+    requiredSkills: ['PSYCHOLOGY'],
+    description: "Design user interfaces and experiences. Creative problem solving.",
+    miniGameType: 'pattern_match',
+    difficulty: 'medium',
+    icon: React.createElement(SkillIcon, {className: "text-violet-600"})
+  },
+  DEVOPS_ENGINEER: {
+    id: 'DEVOPS_ENGINEER',
+    title: 'DevOps Engineer',
+    category: 'tech',
+    basePayPerTurn: 780,
+    requiredSkills: ['PROGRAMMING', 'TECHNICAL_ANALYSIS'],
+    description: "Automate deployment pipelines. Advanced technical skills.",
+    miniGameType: 'assembly_line',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-lime-700"})
+  },
+  AI_ENGINEER: {
+    id: 'AI_ENGINEER',
+    title: 'AI/ML Engineer',
+    category: 'tech',
+    basePayPerTurn: 920,
+    requiredSkills: ['DATA_SCIENCE', 'PROGRAMMING'],
+    description: "Build machine learning models. Elite technical and math skills.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-purple-700"})
+  },
+
+  // Additional Management Jobs
+  PROJECT_MANAGER: {
+    id: 'PROJECT_MANAGER',
+    title: 'Project Manager',
+    category: 'management',
+    basePayPerTurn: 680,
+    requiredSkills: ['LEADERSHIP', 'TIME_MANAGEMENT'],
+    description: "Lead projects from start to finish. Organization and delegation.",
+    miniGameType: 'delivery_route',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-blue-700"})
+  },
+  VP_SALES: {
+    id: 'VP_SALES',
+    title: 'VP of Sales',
+    category: 'management',
+    basePayPerTurn: 1100,
+    requiredSkills: ['LEADERSHIP', 'ADVANCED_NEGOTIATION', 'PUBLIC_SPEAKING'],
+    description: "Drive company-wide sales strategy. Executive leadership.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(MoneyIcon, {className: "text-gold-700"})
+  },
+  COO: {
+    id: 'COO',
+    title: 'Chief Operating Officer',
+    category: 'management',
+    basePayPerTurn: 1500,
+    requiredSkills: ['LEADERSHIP', 'ENTREPRENEURSHIP', 'ADVANCED_ACCOUNTING'],
+    description: "Oversee all business operations. C-suite executive role.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(SkillIcon, {className: "text-amber-800"})
+  },
+  CFO: {
+    id: 'CFO',
+    title: 'Chief Financial Officer',
+    category: 'management',
+    basePayPerTurn: 1600,
+    requiredSkills: ['ADVANCED_ACCOUNTING', 'FINANCIAL_LITERACY', 'LEADERSHIP'],
+    description: "Lead financial strategy and planning. Elite financial expertise.",
+    miniGameType: 'math_quiz',
+    difficulty: 'hard',
+    icon: React.createElement(MoneyIcon, {className: "text-green-800"})
   }
 };
