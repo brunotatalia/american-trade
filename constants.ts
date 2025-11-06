@@ -468,6 +468,310 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     rentPerTurn: 200,
     description: "Zoned for commercial use. Billboard income, development upside.",
     icon: React.createElement(PropertyIcon, {className: "text-gray-600"})
+  },
+
+  // Residential - Luxury
+  PENTHOUSE: {
+    id: 'PENTHOUSE',
+    name: 'Luxury Penthouse',
+    cost: 2500000,
+    rentPerTurn: 8000,
+    description: "Top-floor luxury unit. Premium rents, high appreciation.",
+    icon: React.createElement(PropertyIcon, {className: "text-gold-500"})
+  },
+  WATERFRONT_CONDO: {
+    id: 'WATERFRONT_CONDO',
+    name: 'Waterfront Condo',
+    cost: 1800000,
+    rentPerTurn: 6000,
+    description: "Ocean or lake view condo. Vacation rental potential.",
+    icon: React.createElement(PropertyIcon, {className: "text-blue-500"})
+  },
+  MOUNTAIN_CABIN: {
+    id: 'MOUNTAIN_CABIN',
+    name: 'Mountain Cabin',
+    cost: 450000,
+    rentPerTurn: 1500,
+    description: "Vacation rental in the mountains. Seasonal income.",
+    icon: React.createElement(PropertyIcon, {className: "text-green-600"})
+  },
+  BEACH_HOUSE: {
+    id: 'BEACH_HOUSE',
+    name: 'Beach House',
+    cost: 1200000,
+    rentPerTurn: 4500,
+    description: "Coastal property. Strong vacation rental demand.",
+    icon: React.createElement(PropertyIcon, {className: "text-cyan-500"})
+  },
+  GATED_COMMUNITY_HOME: {
+    id: 'GATED_COMMUNITY_HOME',
+    name: 'Gated Community Home',
+    cost: 850000,
+    rentPerTurn: 3200,
+    description: "Secure neighborhood. Premium tenants, lower turnover.",
+    icon: React.createElement(PropertyIcon, {className: "text-purple-500"})
+  },
+  GOLF_COURSE_VILLA: {
+    id: 'GOLF_COURSE_VILLA',
+    name: 'Golf Course Villa',
+    cost: 1500000,
+    rentPerTurn: 5500,
+    description: "Luxury home on golf course. Affluent renters.",
+    icon: React.createElement(PropertyIcon, {className: "text-green-700"})
+  },
+
+  // Commercial - Retail
+  STRIP_MALL: {
+    id: 'STRIP_MALL',
+    name: 'Strip Mall',
+    cost: 2200000,
+    rentPerTurn: 12000,
+    description: "Multi-tenant retail center. Stable income from multiple leases.",
+    icon: React.createElement(PropertyIcon, {className: "text-indigo-600"})
+  },
+  CONVENIENCE_STORE: {
+    id: 'CONVENIENCE_STORE',
+    name: 'Convenience Store',
+    cost: 650000,
+    rentPerTurn: 3500,
+    description: "24/7 retail. Consistent foot traffic, stable returns.",
+    icon: React.createElement(PropertyIcon, {className: "text-orange-500"})
+  },
+  GAS_STATION: {
+    id: 'GAS_STATION',
+    name: 'Gas Station',
+    cost: 1400000,
+    rentPerTurn: 7000,
+    description: "Fuel and convenience. High traffic, strong cash flow.",
+    icon: React.createElement(PropertyIcon, {className: "text-red-600"})
+  },
+  RESTAURANT_SPACE: {
+    id: 'RESTAURANT_SPACE',
+    name: 'Restaurant Space',
+    cost: 900000,
+    rentPerTurn: 4200,
+    description: "Prime dining location. Lease to restaurant operators.",
+    icon: React.createElement(PropertyIcon, {className: "text-yellow-600"})
+  },
+  CAR_WASH: {
+    id: 'CAR_WASH',
+    name: 'Car Wash',
+    cost: 850000,
+    rentPerTurn: 4500,
+    description: "Automated car wash. Passive income, low maintenance.",
+    icon: React.createElement(PropertyIcon, {className: "text-cyan-600"})
+  },
+  LAUNDROMAT: {
+    id: 'LAUNDROMAT',
+    name: 'Laundromat',
+    cost: 550000,
+    rentPerTurn: 2800,
+    description: "Coin-operated laundry. Recession-resistant business.",
+    icon: React.createElement(PropertyIcon, {className: "text-blue-400"})
+  },
+
+  // Commercial - Office
+  COWORKING_SPACE: {
+    id: 'COWORKING_SPACE',
+    name: 'Coworking Space',
+    cost: 1200000,
+    rentPerTurn: 6500,
+    description: "Flexible office space. High demand from startups.",
+    icon: React.createElement(PropertyIcon, {className: "text-purple-600"})
+  },
+  MEDICAL_OFFICE: {
+    id: 'MEDICAL_OFFICE',
+    name: 'Medical Office Building',
+    cost: 3500000,
+    rentPerTurn: 15000,
+    description: "Healthcare facility. Long-term medical tenants.",
+    icon: React.createElement(PropertyIcon, {className: "text-red-500"})
+  },
+  LAW_OFFICE: {
+    id: 'LAW_OFFICE',
+    name: 'Law Office Complex',
+    cost: 2800000,
+    rentPerTurn: 13000,
+    description: "Professional office space. Prestigious location.",
+    icon: React.createElement(PropertyIcon, {className: "text-slate-700"})
+  },
+  TECH_OFFICE: {
+    id: 'TECH_OFFICE',
+    name: 'Tech Office Campus',
+    cost: 5000000,
+    rentPerTurn: 22000,
+    description: "Modern tech workspace. High-paying corporate tenants.",
+    icon: React.createElement(PropertyIcon, {className: "text-blue-700"})
+  },
+
+  // Industrial
+  DISTRIBUTION_CENTER: {
+    id: 'DISTRIBUTION_CENTER',
+    name: 'Distribution Center',
+    cost: 4500000,
+    rentPerTurn: 20000,
+    description: "Logistics hub. E-commerce demand driving growth.",
+    icon: React.createElement(PropertyIcon, {className: "text-amber-700"})
+  },
+  MANUFACTURING_PLANT: {
+    id: 'MANUFACTURING_PLANT',
+    name: 'Manufacturing Plant',
+    cost: 6000000,
+    rentPerTurn: 25000,
+    description: "Industrial production facility. Long-term leases.",
+    icon: React.createElement(PropertyIcon, {className: "text-gray-700"})
+  },
+  COLD_STORAGE: {
+    id: 'COLD_STORAGE',
+    name: 'Cold Storage Warehouse',
+    cost: 3200000,
+    rentPerTurn: 14000,
+    description: "Refrigerated storage. Food industry demand.",
+    icon: React.createElement(PropertyIcon, {className: "text-cyan-700"})
+  },
+  DATA_CENTER: {
+    id: 'DATA_CENTER',
+    name: 'Data Center',
+    cost: 8000000,
+    rentPerTurn: 35000,
+    description: "Server hosting facility. Critical infrastructure, premium rents.",
+    icon: React.createElement(PropertyIcon, {className: "text-indigo-800"})
+  },
+
+  // Hospitality
+  MOTEL: {
+    id: 'MOTEL',
+    name: 'Roadside Motel',
+    cost: 1100000,
+    rentPerTurn: 5000,
+    description: "Budget accommodation. Highway traffic, steady income.",
+    icon: React.createElement(PropertyIcon, {className: "text-orange-600"})
+  },
+  BOUTIQUE_HOTEL: {
+    id: 'BOUTIQUE_HOTEL',
+    name: 'Boutique Hotel',
+    cost: 3800000,
+    rentPerTurn: 16000,
+    description: "Upscale small hotel. Premium rates, loyal customers.",
+    icon: React.createElement(PropertyIcon, {className: "text-purple-700"})
+  },
+  RESORT: {
+    id: 'RESORT',
+    name: 'Resort Property',
+    cost: 12000000,
+    rentPerTurn: 50000,
+    description: "Full-service resort. High-end tourism destination.",
+    icon: React.createElement(PropertyIcon, {className: "text-gold-700"})
+  },
+  BED_AND_BREAKFAST: {
+    id: 'BED_AND_BREAKFAST',
+    name: 'Bed & Breakfast',
+    cost: 650000,
+    rentPerTurn: 2800,
+    description: "Charming small inn. Personal touch, repeat guests.",
+    icon: React.createElement(PropertyIcon, {className: "text-pink-600"})
+  },
+
+  // Specialized
+  SELF_STORAGE: {
+    id: 'SELF_STORAGE',
+    name: 'Self-Storage Facility',
+    cost: 1800000,
+    rentPerTurn: 9000,
+    description: "Storage units. Low maintenance, high occupancy.",
+    icon: React.createElement(PropertyIcon, {className: "text-slate-600"})
+  },
+  RV_PARK: {
+    id: 'RV_PARK',
+    name: 'RV Park',
+    cost: 950000,
+    rentPerTurn: 4200,
+    description: "RV camping spots. Growing market, minimal overhead.",
+    icon: React.createElement(PropertyIcon, {className: "text-green-500"})
+  },
+  MARINA: {
+    id: 'MARINA',
+    name: 'Marina & Boat Slips',
+    cost: 2500000,
+    rentPerTurn: 11000,
+    description: "Boat storage and services. Affluent clientele.",
+    icon: React.createElement(PropertyIcon, {className: "text-blue-600"})
+  },
+  BILLBOARD_SITE: {
+    id: 'BILLBOARD_SITE',
+    name: 'Billboard Property',
+    cost: 200000,
+    rentPerTurn: 800,
+    description: "High-traffic advertising space. Passive income.",
+    icon: React.createElement(PropertyIcon, {className: "text-yellow-500"})
+  },
+  CELL_TOWER_SITE: {
+    id: 'CELL_TOWER_SITE',
+    name: 'Cell Tower Lease',
+    cost: 400000,
+    rentPerTurn: 1800,
+    description: "Telecommunications tower. Long-term contracts, reliable income.",
+    icon: React.createElement(PropertyIcon, {className: "text-red-400"})
+  },
+
+  // Mixed Use
+  MIXED_USE_BUILDING: {
+    id: 'MIXED_USE_BUILDING',
+    name: 'Mixed-Use Building',
+    cost: 3500000,
+    rentPerTurn: 16000,
+    description: "Retail below, residential above. Diversified income.",
+    icon: React.createElement(PropertyIcon, {className: "text-violet-600"})
+  },
+  LIFESTYLE_CENTER: {
+    id: 'LIFESTYLE_CENTER',
+    name: 'Lifestyle Center',
+    cost: 8500000,
+    rentPerTurn: 38000,
+    description: "Upscale shopping and dining. Entertainment destination.",
+    icon: React.createElement(PropertyIcon, {className: "text-pink-700"})
+  },
+
+  // Agricultural
+  VINEYARD: {
+    id: 'VINEYARD',
+    name: 'Vineyard',
+    cost: 2200000,
+    rentPerTurn: 8500,
+    description: "Wine grape production. Premium product, growing demand.",
+    icon: React.createElement(PropertyIcon, {className: "text-purple-800"})
+  },
+  ORCHARD: {
+    id: 'ORCHARD',
+    name: 'Fruit Orchard',
+    cost: 800000,
+    rentPerTurn: 3500,
+    description: "Tree fruit production. Seasonal harvest, stable returns.",
+    icon: React.createElement(PropertyIcon, {className: "text-green-600"})
+  },
+  RANCH: {
+    id: 'RANCH',
+    name: 'Cattle Ranch',
+    cost: 1500000,
+    rentPerTurn: 6000,
+    description: "Livestock operation. Beef production, grazing leases.",
+    icon: React.createElement(PropertyIcon, {className: "text-amber-600"})
+  },
+  SOLAR_FARM: {
+    id: 'SOLAR_FARM',
+    name: 'Solar Farm',
+    cost: 3000000,
+    rentPerTurn: 13000,
+    description: "Renewable energy production. Government incentives, long-term contracts.",
+    icon: React.createElement(PropertyIcon, {className: "text-yellow-600"})
+  },
+  WIND_FARM: {
+    id: 'WIND_FARM',
+    name: 'Wind Farm',
+    cost: 4500000,
+    rentPerTurn: 18000,
+    description: "Wind turbine energy. Green energy demand growing.",
+    icon: React.createElement(PropertyIcon, {className: "text-sky-600"})
   }
 };
 
