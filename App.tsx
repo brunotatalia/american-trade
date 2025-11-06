@@ -1,12 +1,12 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Player, Commodity, Property, Skill, GameEvent, Era, LogEntry, GameState, ActiveView, Order
+import {
+  Player, Commodity, Property, Skill, GameEvent, Era, LogEntry, GameState, ActiveView, Order, Job
 } from './types';
-import { 
+import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
-  COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
+  COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, JOBS_DATA, API_KEY_WARNING
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
@@ -15,10 +15,13 @@ import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
 import { RealEstateView } from './components/RealEstateView';
 import { SkillsView } from './components/SkillsView';
+import { JobsView } from './components/JobsView';
+import { TradingView } from './components/TradingView';
+import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { LogView } from './components/LogView';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -26,20 +29,28 @@ const App: React.FC = () => {
       money: 0,
       reputation: INITIAL_PLAYER_REPUTATION,
       commodities: {},
-      properties: {}, // Changed from array to Record
+      properties: {},
       skills: [],
       orders: [],
+      currentJob: null,
+      jobPerformance: {},
+      optionsContracts: [],
+      leveragedPositions: [],
+      tradingLevel: 1,
     },
     currentEra: null,
     commodities: COMMODITIES_DATA,
     properties: PROPERTIES_DATA,
     skills: SKILLS_DATA,
+    jobs: JOBS_DATA,
     gameLog: [],
     currentEvent: null,
     gameTurn: 0,
     gameStarted: false,
     isLoadingEvent: false,
     marketNews: [],
+    priceHistory: {},
+    activeMiniGame: null,
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
@@ -74,6 +85,7 @@ const App: React.FC = () => {
     const tick = async () => {
       setGameState(prev => {
         // Use prev state instead of stale gameState closure
+        const previousCommodities = { ...prev.commodities };
         const updatedCommodities = GameLogic.updateMarketPrices(prev.commodities, prev.currentEra!, prev.player.skills);
         const income = GameLogic.calculatePlayerIncome(prev.player, prev.properties, prev.skills, updatedCommodities);
 
@@ -101,6 +113,37 @@ const App: React.FC = () => {
             newLogs.push(...orderLogs);
         }
 
+        // Process expired options
+        const { player: playerAfterOptions, logs: optionLogs } = GameLogic.processExpiredOptions(
+          newPlayerState,
+          prev.gameTurn + 1
+        );
+        newPlayerState = playerAfterOptions;
+        if (optionLogs.length > 0) {
+          newLogs.push(...optionLogs);
+        }
+
+        // Update leverage positions
+        newPlayerState = GameLogic.updateLeveragePositions(newPlayerState, updatedCommodities);
+
+        // Process liquidations
+        const { player: playerAfterLiquidations, logs: liquidationLogs } = GameLogic.processLiquidations(
+          newPlayerState,
+          updatedCommodities
+        );
+        newPlayerState = playerAfterLiquidations;
+        if (liquidationLogs.length > 0) {
+          newLogs.push(...liquidationLogs);
+        }
+
+        // Update price history for charts
+        const updatedPriceHistory = GameLogic.updatePriceHistory(
+          prev.priceHistory,
+          updatedCommodities,
+          previousCommodities,
+          prev.gameTurn + 1
+        );
+
         return {
           ...prev,
           player: {
@@ -108,6 +151,7 @@ const App: React.FC = () => {
             money: parseFloat(newPlayerState.money.toFixed(2)),
           },
           commodities: updatedCommodities,
+          priceHistory: updatedPriceHistory,
           gameLog: [...prev.gameLog, ...newLogs].slice(-MAX_LOG_ENTRIES),
           gameTurn: prev.gameTurn + 1,
           isLoadingEvent: false,
@@ -214,6 +258,85 @@ const App: React.FC = () => {
     setGameState(prev => ({ ...prev, currentEvent: null })); // Clear event after choice
   }, [gameState]);
 
+  const handleSelectJob = useCallback((jobId: string) => {
+    const result = GameLogic.selectJob(gameState.player, jobId);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, addLogEntry]);
+
+  const handleWorkShift = useCallback((jobId: string) => {
+    const job = gameState.jobs[jobId];
+    if (!job) return;
+
+    // Open the mini-game modal
+    setGameState(prev => ({
+      ...prev,
+      activeMiniGame: { jobId, type: job.miniGameType }
+    }));
+  }, [gameState.jobs]);
+
+  const handleMiniGameComplete = useCallback((result: import('./types').MiniGameResult) => {
+    if (!gameState.activeMiniGame) return;
+
+    const jobId = gameState.activeMiniGame.jobId;
+    const { player: updatedPlayer, log } = GameLogic.processJobResult(gameState.player, jobId, result);
+
+    setGameState(prev => ({
+      ...prev,
+      player: updatedPlayer,
+      activeMiniGame: null,
+      gameLog: [...prev.gameLog, log].slice(-MAX_LOG_ENTRIES)
+    }));
+  }, [gameState.activeMiniGame, gameState.player]);
+
+  const handleBuyOption = useCallback((commodityId: string, type: 'CALL' | 'PUT', strikePrice: number, premium: number, quantity: number, expirationTurns: number) => {
+    const result = GameLogic.buyOption(gameState.player, commodityId, type, strikePrice, premium, quantity, expirationTurns, gameState.gameTurn);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, gameState.gameTurn, addLogEntry]);
+
+  const handleExerciseOption = useCallback((optionId: string) => {
+    const result = GameLogic.exerciseOption(gameState.player, optionId, gameState.commodities);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, gameState.commodities, addLogEntry]);
+
+  const handleSellOption = useCallback((optionId: string) => {
+    const result = GameLogic.sellOption(gameState.player, optionId, gameState.commodities);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, gameState.commodities, addLogEntry]);
+
+  const handleOpenLeveragePosition = useCallback((commodityId: string, type: 'LONG' | 'SHORT', leverage: number, quantity: number) => {
+    const commodity = gameState.commodities[commodityId];
+    if (!commodity) return;
+    const result = GameLogic.openLeveragePosition(gameState.player, commodityId, type, leverage, quantity, commodity.price, gameState.gameTurn);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, gameState.commodities, gameState.gameTurn, addLogEntry]);
+
+  const handleCloseLeveragePosition = useCallback((positionId: string) => {
+    const position = gameState.player.leveragedPositions.find(p => p.id === positionId);
+    if (!position) return;
+    const commodity = gameState.commodities[position.commodityId];
+    if (!commodity) return;
+    const result = GameLogic.closeLeveragePosition(gameState.player, positionId, commodity.price);
+    if (result.success && result.player) {
+      setGameState(prev => ({ ...prev, player: result.player! }));
+    }
+    if (result.log) addLogEntry(result.log.message, result.log.type);
+  }, [gameState.player, gameState.commodities, addLogEntry]);
+
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -222,24 +345,39 @@ const App: React.FC = () => {
   const renderActiveView = () => {
     switch (activeView) {
       case 'MARKET':
-        return <MarketView 
-                    gameState={gameState} 
-                    onBuyCommodity={handleBuyCommodity} 
+        return <MarketView
+                    gameState={gameState}
+                    onBuyCommodity={handleBuyCommodity}
                     onSellCommodity={handleSellCommodity}
                     onPlaceOrder={handlePlaceOrder}
-                    onCancelOrder={handleCancelOrder} 
+                    onCancelOrder={handleCancelOrder}
                 />;
       case 'REAL_ESTATE':
         return <RealEstateView gameState={gameState} onBuyProperty={handleBuyProperty} />;
       case 'SKILLS':
         return <SkillsView gameState={gameState} onUnlockSkill={handleUnlockSkill} />;
+      case 'JOBS':
+        return <JobsView
+                    gameState={gameState}
+                    onSelectJob={handleSelectJob}
+                    onWorkShift={handleWorkShift}
+                />;
+      case 'TRADING':
+        return <TradingView
+                    gameState={gameState}
+                    onBuyOption={handleBuyOption}
+                    onExerciseOption={handleExerciseOption}
+                    onSellOption={handleSellOption}
+                    onOpenLeveragePosition={handleOpenLeveragePosition}
+                    onCloseLeveragePosition={handleCloseLeveragePosition}
+                />;
       default:
-        return <MarketView 
-                    gameState={gameState} 
-                    onBuyCommodity={handleBuyCommodity} 
-                    onSellCommodity={handleSellCommodity} 
+        return <MarketView
+                    gameState={gameState}
+                    onBuyCommodity={handleBuyCommodity}
+                    onSellCommodity={handleSellCommodity}
                     onPlaceOrder={handlePlaceOrder}
-                    onCancelOrder={handleCancelOrder} 
+                    onCancelOrder={handleCancelOrder}
                 />;
     }
   };
@@ -275,7 +413,9 @@ const App: React.FC = () => {
             <NavButton view="MARKET" label="Market" icon={<CommodityIcon/>}/>
             <NavButton view="REAL_ESTATE" label="Real Estate" icon={<PropertyIcon/>}/>
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
-            <div className="mt-auto"> {/* Pushes dashboard to bottom of nav if desired, or integrate into main view */}
+            <NavButton view="JOBS" label="Jobs" icon={<MoneyIcon/>}/>
+            <NavButton view="TRADING" label="Trading Platform" icon={<TrendUpIcon/>}/>
+            <div className="mt-auto">
                  {/* Can add quick stats here or a mini-log preview */}
             </div>
         </aside>
@@ -296,12 +436,20 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <EventPopup 
-        event={gameState.currentEvent} 
+      <EventPopup
+        event={gameState.currentEvent}
         onClose={() => setGameState(prev => ({ ...prev, currentEvent: null }))}
         onChoice={handleEventChoice}
         gameState={gameState}
       />
+
+      {gameState.activeMiniGame && (
+        <MiniGameModal
+          job={gameState.jobs[gameState.activeMiniGame.jobId]}
+          onClose={() => setGameState(prev => ({ ...prev, activeMiniGame: null }))}
+          onComplete={handleMiniGameComplete}
+        />
+      )}
     </div>
   );
 };

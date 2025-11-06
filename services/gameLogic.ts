@@ -18,7 +18,7 @@ import {
 import { generateGameEventDescription, generateMarketNews } from './geminiService';
 
 export const updateMarketPrices = (
-    commodities: Record<string, Commodity>, 
+    commodities: Record<string, Commodity>,
     era: Era,
     playerSkills: string[]
 ): Record<string, Commodity> => {
@@ -38,6 +38,47 @@ export const updateMarketPrices = (
     updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
   }
   return updatedCommodities;
+};
+
+// Price history tracking for charts
+export const updatePriceHistory = (
+  priceHistory: Record<string, import('../types').PriceHistory[]>,
+  commodities: Record<string, Commodity>,
+  previousCommodities: Record<string, Commodity>,
+  currentTurn: number,
+  maxHistoryLength: number = 100
+): Record<string, import('../types').PriceHistory[]> => {
+  const updatedHistory = { ...priceHistory };
+
+  for (const id in commodities) {
+    const currentPrice = commodities[id].price;
+    const previousPrice = previousCommodities[id]?.price || currentPrice;
+
+    if (!updatedHistory[id]) {
+      updatedHistory[id] = [];
+    }
+
+    // Create candlestick data
+    // For simplicity, we'll use the previous close as open, and add some variation for high/low
+    const open = previousPrice;
+    const close = currentPrice;
+    const priceRange = Math.abs(currentPrice - previousPrice);
+    const high = Math.max(open, close) + (priceRange * Math.random() * 0.3);
+    const low = Math.min(open, close) - (priceRange * Math.random() * 0.3);
+
+    const candlestick: import('../types').PriceHistory = {
+      turn: currentTurn,
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
+      volume: Math.floor(Math.random() * 10000) + 1000 // Simulated volume
+    };
+
+    updatedHistory[id] = [...updatedHistory[id], candlestick].slice(-maxHistoryLength);
+  }
+
+  return updatedHistory;
 };
 
 export const calculatePlayerIncome = (
@@ -553,4 +594,363 @@ export const processPendingOrders = (
 
   tempPlayer.orders = remainingOrders;
   return { player: tempPlayer, logs: tempLogs };
+};
+
+// Job system functions
+export const selectJob = (
+  player: Player,
+  jobId: string
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const newPlayerState = { ...player };
+  newPlayerState.currentJob = jobId;
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Selected new job. Ready to work!`, 'action'),
+    success: true
+  };
+};
+
+export const processJobResult = (
+  player: Player,
+  jobId: string,
+  result: import('../types').MiniGameResult
+): { player: Player; log: LogEntry } => {
+  const newPlayerState = { ...player };
+
+  // Initialize job performance if it doesn't exist
+  if (!newPlayerState.jobPerformance[jobId]) {
+    newPlayerState.jobPerformance[jobId] = {
+      jobId,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      averageScore: 0,
+      bestScore: 0,
+      totalEarnings: 0,
+      streak: 0
+    };
+  }
+
+  const perf = { ...newPlayerState.jobPerformance[jobId] };
+
+  // Update stats
+  perf.gamesPlayed += 1;
+  if (result.passed) {
+    perf.gamesWon += 1;
+    perf.streak += 1;
+  } else {
+    perf.streak = 0; // Reset streak on failure
+  }
+
+  // Update scores
+  perf.averageScore = ((perf.averageScore * (perf.gamesPlayed - 1)) + result.score) / perf.gamesPlayed;
+  if (result.score > perf.bestScore) {
+    perf.bestScore = result.score;
+  }
+
+  // Calculate earnings with streak bonus
+  let finalEarnings = result.earnings;
+  if (perf.streak >= 10) {
+    finalEarnings *= 2.0; // 100% bonus at 10+ streak
+  } else if (perf.streak >= 5) {
+    finalEarnings *= 1.5; // 50% bonus at 5-9 streak
+  }
+
+  perf.totalEarnings += finalEarnings;
+
+  // Update player
+  newPlayerState.money += finalEarnings;
+  newPlayerState.jobPerformance[jobId] = perf;
+
+  // Create log message
+  let message = `Work shift complete! Earned $${finalEarnings.toFixed(2)} (${result.performanceRating})`;
+  if (perf.streak >= 5) {
+    message += ` 🔥 ${perf.streak} streak bonus!`;
+  }
+
+  return {
+    player: newPlayerState,
+    log: createLog(message, result.passed ? 'success' : 'warning')
+  };
+};
+
+// Options trading functions
+export const buyOption = (
+  player: Player,
+  commodityId: string,
+  type: 'CALL' | 'PUT',
+  strikePrice: number,
+  premium: number,
+  quantity: number,
+  expirationTurns: number,
+  currentTurn: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const totalCost = premium * quantity;
+
+  if (player.money < totalCost) {
+    return { log: createLog(`Not enough money to buy option. Need $${totalCost.toFixed(2)}.`, 'error'), success: false };
+  }
+
+  const newPlayerState = { ...player };
+  newPlayerState.money -= totalCost;
+
+  const newOption: import('../types').OptionsContract = {
+    id: `option-${Date.now()}-${Math.random()}`,
+    commodityId,
+    type,
+    strikePrice: parseFloat(strikePrice.toFixed(2)),
+    premium,
+    expirationTurn: currentTurn + expirationTurns,
+    quantity,
+    purchasedAtTurn: currentTurn
+  };
+
+  newPlayerState.optionsContracts = [...newPlayerState.optionsContracts, newOption];
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Bought ${quantity} ${type} option(s) for $${totalCost.toFixed(2)}.`, 'action'),
+    success: true
+  };
+};
+
+export const exerciseOption = (
+  player: Player,
+  optionId: string,
+  commodities: Record<string, Commodity>
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const option = player.optionsContracts.find(o => o.id === optionId);
+  if (!option) {
+    return { log: createLog('Option not found.', 'error'), success: false };
+  }
+
+  const commodity = commodities[option.commodityId];
+  if (!commodity) {
+    return { log: createLog('Commodity not found.', 'error'), success: false };
+  }
+
+  // Calculate intrinsic value
+  const intrinsicValue = option.type === 'CALL'
+    ? Math.max(0, commodity.price - option.strikePrice)
+    : Math.max(0, option.strikePrice - commodity.price);
+
+  if (intrinsicValue <= 0) {
+    return { log: createLog('Option is not in the money. Cannot exercise.', 'warning'), success: false };
+  }
+
+  const totalProfit = intrinsicValue * option.quantity;
+  const totalCost = option.premium * option.quantity;
+  const netProfit = totalProfit - totalCost;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += totalProfit;
+  newPlayerState.optionsContracts = newPlayerState.optionsContracts.filter(o => o.id !== optionId);
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Exercised ${option.type} option. Profit: $${totalProfit.toFixed(2)}. Net: $${netProfit.toFixed(2)}`, netProfit >= 0 ? 'success' : 'warning'),
+    success: true
+  };
+};
+
+export const sellOption = (
+  player: Player,
+  optionId: string,
+  commodities: Record<string, Commodity>
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const option = player.optionsContracts.find(o => o.id === optionId);
+  if (!option) {
+    return { log: createLog('Option not found.', 'error'), success: false };
+  }
+
+  const commodity = commodities[option.commodityId];
+  if (!commodity) {
+    return { log: createLog('Commodity not found.', 'error'), success: false };
+  }
+
+  // Calculate current value (simplified - just intrinsic value)
+  const intrinsicValue = option.type === 'CALL'
+    ? Math.max(0, commodity.price - option.strikePrice)
+    : Math.max(0, option.strikePrice - commodity.price);
+
+  const sellPrice = intrinsicValue * option.quantity * 0.9; // 10% haircut for early sale
+  const totalCost = option.premium * option.quantity;
+  const netProfit = sellPrice - totalCost;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += sellPrice;
+  newPlayerState.optionsContracts = newPlayerState.optionsContracts.filter(o => o.id !== optionId);
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Sold ${option.type} option for $${sellPrice.toFixed(2)}. Net: $${netProfit.toFixed(2)}`, netProfit >= 0 ? 'success' : 'warning'),
+    success: true
+  };
+};
+
+// Process expired options
+export const processExpiredOptions = (
+  player: Player,
+  currentTurn: number
+): { player: Player; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const logs: LogEntry[] = [];
+
+  const expiredOptions = player.optionsContracts.filter(o => o.expirationTurn <= currentTurn);
+  const activeOptions = player.optionsContracts.filter(o => o.expirationTurn > currentTurn);
+
+  if (expiredOptions.length > 0) {
+    expiredOptions.forEach(option => {
+      const totalCost = option.premium * option.quantity;
+      logs.push(createLog(`${option.type} option expired worthless. Lost $${totalCost.toFixed(2)}.`, 'warning'));
+    });
+    newPlayerState.optionsContracts = activeOptions;
+  }
+
+  return { player: newPlayerState, logs };
+};
+
+// Leverage trading functions
+export const openLeveragePosition = (
+  player: Player,
+  commodityId: string,
+  type: 'LONG' | 'SHORT',
+  leverage: number,
+  quantity: number,
+  currentPrice: number,
+  currentTurn: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  // Calculate margin requirement
+  const positionSize = currentPrice * quantity;
+  const marginRequired = positionSize / leverage;
+
+  if (player.money < marginRequired) {
+    return { log: createLog(`Not enough money for margin. Need $${marginRequired.toFixed(2)}.`, 'error'), success: false };
+  }
+
+  // Check trading level for leverage
+  if (player.tradingLevel < leverage) {
+    return { log: createLog(`Trading level ${leverage} required for ${leverage}x leverage.`, 'error'), success: false };
+  }
+
+  // Calculate liquidation price
+  const liquidationPercent = 1 / leverage;
+  const liquidationPrice = type === 'LONG'
+    ? currentPrice * (1 - liquidationPercent)
+    : currentPrice * (1 + liquidationPercent);
+
+  const newPlayerState = { ...player };
+  newPlayerState.money -= marginRequired;
+
+  const newPosition: import('../types').LeveragedPosition = {
+    id: `leverage-${Date.now()}-${Math.random()}`,
+    commodityId,
+    type,
+    leverage,
+    entryPrice: currentPrice,
+    quantity,
+    margin: parseFloat(marginRequired.toFixed(2)),
+    currentValue: positionSize,
+    liquidationPrice: parseFloat(liquidationPrice.toFixed(2)),
+    openedAtTurn: currentTurn
+  };
+
+  newPlayerState.leveragedPositions = [...newPlayerState.leveragedPositions, newPosition];
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Opened ${type} position with ${leverage}x leverage. Margin: $${marginRequired.toFixed(2)}`, 'action'),
+    success: true
+  };
+};
+
+export const closeLeveragePosition = (
+  player: Player,
+  positionId: string,
+  currentPrice: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const position = player.leveragedPositions.find(p => p.id === positionId);
+  if (!position) {
+    return { log: createLog('Position not found.', 'error'), success: false };
+  }
+
+  // Calculate P&L
+  const priceChange = currentPrice - position.entryPrice;
+  const pnl = position.type === 'LONG'
+    ? priceChange * position.quantity * position.leverage
+    : -priceChange * position.quantity * position.leverage;
+
+  const finalValue = position.margin + pnl;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += finalValue;
+  newPlayerState.leveragedPositions = newPlayerState.leveragedPositions.filter(p => p.id !== positionId);
+
+  // Increase trading level if profitable trade
+  if (pnl > 0 && position.leverage >= newPlayerState.tradingLevel) {
+    const levelUpThreshold = 10; // Need 10 profitable trades at current level
+    // This is simplified - could track successful trades per level
+    if (Math.random() < 0.1) { // 10% chance to level up on profitable trade
+      newPlayerState.tradingLevel = Math.min(10, newPlayerState.tradingLevel + 1);
+    }
+  }
+
+  return {
+    player: newPlayerState,
+    log: createLog(
+      `Closed ${position.type} position. P&L: $${pnl.toFixed(2)} (${((pnl/position.margin)*100).toFixed(2)}%)`,
+      pnl >= 0 ? 'success' : 'error'
+    ),
+    success: true
+  };
+};
+
+export const updateLeveragePositions = (
+  player: Player,
+  commodities: Record<string, Commodity>
+): Player => {
+  const updatedPositions = player.leveragedPositions.map(position => {
+    const commodity = commodities[position.commodityId];
+    if (!commodity) return position;
+
+    const currentValue = commodity.price * position.quantity;
+    return { ...position, currentValue: parseFloat(currentValue.toFixed(2)) };
+  });
+
+  return { ...player, leveragedPositions: updatedPositions };
+};
+
+export const processLiquidations = (
+  player: Player,
+  commodities: Record<string, Commodity>
+): { player: Player; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const logs: LogEntry[] = [];
+  const activePositions: import('../types').LeveragedPosition[] = [];
+
+  for (const position of player.leveragedPositions) {
+    const commodity = commodities[position.commodityId];
+    if (!commodity) {
+      activePositions.push(position);
+      continue;
+    }
+
+    const isLiquidated = position.type === 'LONG'
+      ? commodity.price <= position.liquidationPrice
+      : commodity.price >= position.liquidationPrice;
+
+    if (isLiquidated) {
+      // Position is liquidated - lose the margin
+      logs.push(createLog(
+        `⚠️ ${position.type} position LIQUIDATED! Lost $${position.margin.toFixed(2)} margin.`,
+        'error'
+      ));
+      // Margin is already deducted, so no money change
+    } else {
+      activePositions.push(position);
+    }
+  }
+
+  newPlayerState.leveragedPositions = activePositions;
+  return { player: newPlayerState, logs };
 };
