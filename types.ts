@@ -127,6 +127,22 @@ export interface GameEvent {
   triggeredAtTurn?: number;
 }
 
+export interface GameDate {
+  month: number; // 1-12
+  year: number;
+}
+
+export interface WorldNewsEvent {
+  id: string;
+  date: GameDate;
+  title: string;
+  description: string;
+  impact?: {
+    commodityId?: string;
+    priceChange?: number; // percentage
+  };
+}
+
 export interface Era {
   id: string;
   name: string;
@@ -136,6 +152,8 @@ export interface Era {
   availableCommodities: string[]; // IDs
   availableProperties: string[]; // IDs
   availableSkills: string[]; // IDs
+  startDate: GameDate; // When this era begins
+  endDate: GameDate; // When this era ends
 }
 
 export interface LogEntry {
@@ -159,6 +177,9 @@ export interface GameState {
   marketNews: string[];
   priceHistory: Record<string, PriceHistory[]>; // Commodity ID -> price history
   activeMiniGame: { jobId: string; type: string } | null;
+  currentDate: GameDate; // Current in-game date
+  worldNewsHistory: WorldNewsEvent[]; // Historical news events
+  showWorldNews: boolean; // Flag to display monthly news
 }
 
 export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'NEWS';
