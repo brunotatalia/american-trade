@@ -495,14 +495,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     description: "Vacation rental in the mountains. Seasonal income.",
     icon: React.createElement(PropertyIcon, {className: "text-green-600"})
   },
-  BEACH_HOUSE: {
-    id: 'BEACH_HOUSE',
-    name: 'Beach House',
-    cost: 1200000,
-    rentPerTurn: 4500,
-    description: "Coastal property. Strong vacation rental demand.",
-    icon: React.createElement(PropertyIcon, {className: "text-cyan-500"})
-  },
   GATED_COMMUNITY_HOME: {
     id: 'GATED_COMMUNITY_HOME',
     name: 'Gated Community Home',
@@ -521,14 +513,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
   },
 
   // Commercial - Retail
-  STRIP_MALL: {
-    id: 'STRIP_MALL',
-    name: 'Strip Mall',
-    cost: 2200000,
-    rentPerTurn: 12000,
-    description: "Multi-tenant retail center. Stable income from multiple leases.",
-    icon: React.createElement(PropertyIcon, {className: "text-indigo-600"})
-  },
   CONVENIENCE_STORE: {
     id: 'CONVENIENCE_STORE',
     name: 'Convenience Store',
@@ -536,30 +520,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     rentPerTurn: 3500,
     description: "24/7 retail. Consistent foot traffic, stable returns.",
     icon: React.createElement(PropertyIcon, {className: "text-orange-500"})
-  },
-  GAS_STATION: {
-    id: 'GAS_STATION',
-    name: 'Gas Station',
-    cost: 1400000,
-    rentPerTurn: 7000,
-    description: "Fuel and convenience. High traffic, strong cash flow.",
-    icon: React.createElement(PropertyIcon, {className: "text-red-600"})
-  },
-  RESTAURANT_SPACE: {
-    id: 'RESTAURANT_SPACE',
-    name: 'Restaurant Space',
-    cost: 900000,
-    rentPerTurn: 4200,
-    description: "Prime dining location. Lease to restaurant operators.",
-    icon: React.createElement(PropertyIcon, {className: "text-yellow-600"})
-  },
-  CAR_WASH: {
-    id: 'CAR_WASH',
-    name: 'Car Wash',
-    cost: 850000,
-    rentPerTurn: 4500,
-    description: "Automated car wash. Passive income, low maintenance.",
-    icon: React.createElement(PropertyIcon, {className: "text-cyan-600"})
   },
   LAUNDROMAT: {
     id: 'LAUNDROMAT',
@@ -579,14 +539,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     description: "Flexible office space. High demand from startups.",
     icon: React.createElement(PropertyIcon, {className: "text-purple-600"})
   },
-  MEDICAL_OFFICE: {
-    id: 'MEDICAL_OFFICE',
-    name: 'Medical Office Building',
-    cost: 3500000,
-    rentPerTurn: 15000,
-    description: "Healthcare facility. Long-term medical tenants.",
-    icon: React.createElement(PropertyIcon, {className: "text-red-500"})
-  },
   LAW_OFFICE: {
     id: 'LAW_OFFICE',
     name: 'Law Office Complex',
@@ -605,14 +557,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
   },
 
   // Industrial
-  DISTRIBUTION_CENTER: {
-    id: 'DISTRIBUTION_CENTER',
-    name: 'Distribution Center',
-    cost: 4500000,
-    rentPerTurn: 20000,
-    description: "Logistics hub. E-commerce demand driving growth.",
-    icon: React.createElement(PropertyIcon, {className: "text-amber-700"})
-  },
   MANUFACTURING_PLANT: {
     id: 'MANUFACTURING_PLANT',
     name: 'Manufacturing Plant',
@@ -628,14 +572,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     rentPerTurn: 14000,
     description: "Refrigerated storage. Food industry demand.",
     icon: React.createElement(PropertyIcon, {className: "text-cyan-700"})
-  },
-  DATA_CENTER: {
-    id: 'DATA_CENTER',
-    name: 'Data Center',
-    cost: 8000000,
-    rentPerTurn: 35000,
-    description: "Server hosting facility. Critical infrastructure, premium rents.",
-    icon: React.createElement(PropertyIcon, {className: "text-indigo-800"})
   },
 
   // Hospitality
@@ -688,14 +624,6 @@ export const PROPERTIES_DATA: Record<string, Property> = {
     rentPerTurn: 4200,
     description: "RV camping spots. Growing market, minimal overhead.",
     icon: React.createElement(PropertyIcon, {className: "text-green-500"})
-  },
-  MARINA: {
-    id: 'MARINA',
-    name: 'Marina & Boat Slips',
-    cost: 2500000,
-    rentPerTurn: 11000,
-    description: "Boat storage and services. Affluent clientele.",
-    icon: React.createElement(PropertyIcon, {className: "text-blue-600"})
   },
   BILLBOARD_SITE: {
     id: 'BILLBOARD_SITE',
@@ -1069,8 +997,8 @@ export const ERAS_DATA: Era[] = [
     startingMoney: 10000,
     marketVolatilityModifier: 0.7,
     availableCommodities: ['CORN', 'WHEAT', 'COTTON', 'OIL', 'GOLD', 'SILVER', 'TREASURY_BONDS'],
-    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'SINGLE_FAMILY_HOME', 'DUPLEX', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'WAREHOUSE', 'FARMLAND', 'VACANT_LAND', 'PARKING_LOT'],
-    availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS', 'REAL_ESTATE_MGMT', 'FINANCIAL_LITERACY']
+    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'SINGLE_FAMILY_HOME', 'DUPLEX', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'WAREHOUSE', 'FARMLAND', 'VACANT_LAND', 'PARKING_LOT', 'FACTORY_BUILDING', 'MOTEL', 'BILLBOARD_SITE', 'MANUFACTURING_PLANT', 'DISTRIBUTION_CENTER', 'RESTAURANT_SPACE', 'GAS_STATION', 'RANCH', 'ORCHARD'],
+    availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS', 'REAL_ESTATE_MGMT', 'FINANCIAL_LITERACY', 'ACCOUNTING_BASICS', 'TIME_MANAGEMENT', 'PUBLIC_SPEAKING', 'LEADERSHIP', 'CRITICAL_THINKING', 'INSURANCE_KNOWLEDGE']
   },
   {
     id: 'DOTCOM_BUBBLE',
@@ -1079,8 +1007,8 @@ export const ERAS_DATA: Era[] = [
     startingMoney: 25000,
     marketVolatilityModifier: 1.4,
     availableCommodities: ['CORN', 'WHEAT', 'OIL', 'NATURAL_GAS', 'GOLD', 'SILVER', 'TECH_STOCKS', 'TREASURY_BONDS', 'CORPORATE_BONDS', 'INDEX_FUND', 'EUR_USD'],
-    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'MULTI_FAMILY', 'SINGLE_FAMILY_HOME', 'CONDO', 'DUPLEX', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'RESTAURANT_SPACE', 'COFFEE_SHOP', 'STRIP_MALL', 'OFFICE_BUILDING', 'GAS_STATION', 'WAREHOUSE', 'INDUSTRIAL_BUILDING', 'PARKING_LOT', 'STORAGE_UNITS', 'FARMLAND', 'VACANT_LAND', 'COMMERCIAL_LAND'],
-    availableSkills: ['BASIC_NEGOTIATION', 'ADVANCED_NEGOTIATION', 'MARKET_ANALYSIS', 'TECHNICAL_ANALYSIS', 'REAL_ESTATE_MGMT', 'RISK_MANAGEMENT', 'NETWORKING', 'FINANCIAL_LITERACY', 'TAX_OPTIMIZATION']
+    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'MULTI_FAMILY', 'SINGLE_FAMILY_HOME', 'CONDO', 'DUPLEX', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'RESTAURANT_SPACE', 'COFFEE_SHOP', 'STRIP_MALL', 'OFFICE_BUILDING', 'GAS_STATION', 'WAREHOUSE', 'INDUSTRIAL_BUILDING', 'PARKING_LOT', 'STORAGE_UNITS', 'FARMLAND', 'VACANT_LAND', 'COMMERCIAL_LAND', 'CAR_WASH', 'CONVENIENCE_STORE', 'LAUNDROMAT', 'HOTEL', 'MOTEL', 'SELF_STORAGE', 'RV_PARK', 'COWORKING_SPACE', 'DISTRIBUTION_CENTER', 'MANUFACTURING_PLANT', 'COLD_STORAGE', 'GATED_COMMUNITY_HOME', 'BEACH_HOUSE', 'MOUNTAIN_CABIN', 'BILLBOARD_SITE', 'CELL_TOWER_SITE', 'VINEYARD', 'ORCHARD', 'RANCH'],
+    availableSkills: ['BASIC_NEGOTIATION', 'ADVANCED_NEGOTIATION', 'MARKET_ANALYSIS', 'TECHNICAL_ANALYSIS', 'REAL_ESTATE_MGMT', 'RISK_MANAGEMENT', 'NETWORKING', 'FINANCIAL_LITERACY', 'TAX_OPTIMIZATION', 'ACCOUNTING_BASICS', 'ADVANCED_ACCOUNTING', 'TIME_MANAGEMENT', 'LEADERSHIP', 'MARKETING_EXPERTISE', 'PROGRAMMING', 'STOCK_PICKING', 'PSYCHOLOGY', 'PUBLIC_SPEAKING', 'CRITICAL_THINKING', 'LEGAL_KNOWLEDGE', 'INSURANCE_KNOWLEDGE', 'FUNDRAISING']
   },
   {
     id: 'MODERN_ERA',
@@ -1089,8 +1017,8 @@ export const ERAS_DATA: Era[] = [
     startingMoney: 50000,
     marketVolatilityModifier: 1.1,
     availableCommodities: ['CORN', 'WHEAT', 'COTTON', 'COFFEE', 'OIL', 'NATURAL_GAS', 'GOLD', 'SILVER', 'TECH_STOCKS', 'TREASURY_BONDS', 'CORPORATE_BONDS', 'INDEX_FUND', 'EUR_USD', 'BITCOIN', 'ETHEREUM'],
-    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'MULTI_FAMILY', 'SINGLE_FAMILY_HOME', 'CONDO', 'DUPLEX', 'LUXURY_CONDO', 'MANSION', 'BEACH_HOUSE', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'RESTAURANT_SPACE', 'COFFEE_SHOP', 'STRIP_MALL', 'OFFICE_BUILDING', 'GAS_STATION', 'CAR_WASH', 'SHOPPING_CENTER', 'HOTEL', 'MEDICAL_OFFICE', 'WAREHOUSE', 'INDUSTRIAL_BUILDING', 'DATA_CENTER', 'DISTRIBUTION_CENTER', 'PARKING_LOT', 'STORAGE_UNITS', 'MOBILE_HOME_PARK', 'MARINA', 'VACANT_LAND', 'FARMLAND', 'TIMBERLAND', 'COMMERCIAL_LAND'],
-    availableSkills: ['BASIC_NEGOTIATION', 'ADVANCED_NEGOTIATION', 'MARKET_ANALYSIS', 'TECHNICAL_ANALYSIS', 'REAL_ESTATE_MGMT', 'PROPERTY_DEVELOPMENT', 'RISK_MANAGEMENT', 'TAX_OPTIMIZATION', 'DIVERSIFICATION', 'NETWORKING', 'FINANCIAL_LITERACY']
+    availableProperties: ['STUDIO_APT', 'SMALL_APT', 'TWO_BED_APT', 'TOWNHOUSE', 'MULTI_FAMILY', 'SINGLE_FAMILY_HOME', 'CONDO', 'DUPLEX', 'LUXURY_CONDO', 'MANSION', 'BEACH_HOUSE', 'COMMERCIAL_SPACE', 'SMALL_OFFICE', 'RESTAURANT_SPACE', 'COFFEE_SHOP', 'STRIP_MALL', 'OFFICE_BUILDING', 'GAS_STATION', 'CAR_WASH', 'SHOPPING_CENTER', 'HOTEL', 'MEDICAL_OFFICE', 'WAREHOUSE', 'INDUSTRIAL_BUILDING', 'DATA_CENTER', 'DISTRIBUTION_CENTER', 'PARKING_LOT', 'STORAGE_UNITS', 'MOBILE_HOME_PARK', 'MARINA', 'VACANT_LAND', 'FARMLAND', 'TIMBERLAND', 'COMMERCIAL_LAND', 'PENTHOUSE', 'WATERFRONT_CONDO', 'MOUNTAIN_CABIN', 'GATED_COMMUNITY_HOME', 'GOLF_COURSE_VILLA', 'CONVENIENCE_STORE', 'LAUNDROMAT', 'COWORKING_SPACE', 'LAW_OFFICE', 'TECH_OFFICE', 'MANUFACTURING_PLANT', 'COLD_STORAGE', 'MOTEL', 'BOUTIQUE_HOTEL', 'RESORT', 'BED_AND_BREAKFAST', 'SELF_STORAGE', 'RV_PARK', 'BILLBOARD_SITE', 'CELL_TOWER_SITE', 'MIXED_USE_BUILDING', 'LIFESTYLE_CENTER', 'VINEYARD', 'ORCHARD', 'RANCH', 'SOLAR_FARM', 'WIND_FARM'],
+    availableSkills: ['BASIC_NEGOTIATION', 'ADVANCED_NEGOTIATION', 'NEGOTIATION_MASTERY', 'MARKET_ANALYSIS', 'TECHNICAL_ANALYSIS', 'REAL_ESTATE_MGMT', 'PROPERTY_DEVELOPMENT', 'RISK_MANAGEMENT', 'TAX_OPTIMIZATION', 'DIVERSIFICATION', 'NETWORKING', 'FINANCIAL_LITERACY', 'LEADERSHIP', 'TIME_MANAGEMENT', 'ACCOUNTING_BASICS', 'ADVANCED_ACCOUNTING', 'LEGAL_KNOWLEDGE', 'MARKETING_EXPERTISE', 'PSYCHOLOGY', 'DATA_SCIENCE', 'PROGRAMMING', 'CYBERSECURITY', 'ENTREPRENEURSHIP', 'INTERNATIONAL_TRADE', 'CRYPTOCURRENCY_EXPERT', 'STOCK_PICKING', 'OPTIONS_TRADING_MASTERY', 'LEVERAGE_MASTERY', 'INSURANCE_KNOWLEDGE', 'ESTATE_PLANNING', 'FUNDRAISING', 'PUBLIC_SPEAKING', 'CRITICAL_THINKING']
   }
 ];
 
