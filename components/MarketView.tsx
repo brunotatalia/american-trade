@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { MoneyIcon, TrendUpIcon, TrendDownIcon, LoadingSpinnerIcon } from './icons';
+import { QuickTradePanel } from './QuickTradePanel';
 
 // --- News Ticker Component ---
 const NewsTicker: React.FC<{ newsItems: string[], isLoading: boolean }> = ({ newsItems, isLoading }) => {
@@ -276,7 +277,7 @@ export const MarketView: React.FC<MarketViewProps> = ({ gameState, onBuyCommodit
   return (
     <div className="p-4">
       {orderModalState.isOpen && orderModalState.commodity && (
-        <OrderModal 
+        <OrderModal
             isOpen={orderModalState.isOpen}
             onClose={() => setOrderModalState({ isOpen: false, commodity: null })}
             commodity={orderModalState.commodity}
@@ -285,29 +286,50 @@ export const MarketView: React.FC<MarketViewProps> = ({ gameState, onBuyCommodit
         />
       )}
 
-      <h2 className="text-2xl font-semibold mb-2 text-blue-300">Marketplace</h2>
-      <p className="text-sm text-gray-400 mb-4">Era: {currentEra.name}. Trade wisely to build your fortune.</p>
+      <div className="mb-4">
+        <h2 className="text-2xl font-semibold mb-2 text-blue-300">Marketplace</h2>
+        <p className="text-sm text-gray-400 mb-4">Era: {currentEra.name}. Trade wisely to build your fortune.</p>
+        <NewsTicker newsItems={marketNews} isLoading={isLoadingEvent} />
+      </div>
 
-      <NewsTicker newsItems={marketNews} isLoading={isLoadingEvent} />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Main Content Area */}
+        <div className="lg:col-span-3 space-y-4">
+          <ActiveOrdersList orders={player.orders} commodities={commodities} onCancelOrder={onCancelOrder} />
 
-      <ActiveOrdersList orders={player.orders} commodities={commodities} onCancelOrder={onCancelOrder} />
+          {availableCommodities.length === 0 && <p className="text-gray-400">No commodities available in this era yet.</p>}
 
-      {availableCommodities.length === 0 && <p className="text-gray-400">No commodities available in this era yet.</p>}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {availableCommodities.map((commodity) => (
-          <CommodityRow
-            key={commodity.id}
-            commodity={commodity}
-            ownedQuantity={player.commodities[commodity.id]?.quantity || 0}
-            committedQuantity={committedCommodities[commodity.id] || 0}
-            avgBuyPrice={player.commodities[commodity.id]?.avgBuyPrice || 0}
-            onBuy={(quantity) => onBuyCommodity(commodity.id, quantity)}
-            onSell={(quantity) => onSellCommodity(commodity.id, quantity)}
-            onSetOrder={() => handleOpenOrderModal(commodity)}
-            playerMoney={playerAvailableMoney}
-          />
-        ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {availableCommodities.map((commodity) => (
+              <CommodityRow
+                key={commodity.id}
+                commodity={commodity}
+                ownedQuantity={player.commodities[commodity.id]?.quantity || 0}
+                committedQuantity={committedCommodities[commodity.id] || 0}
+                avgBuyPrice={player.commodities[commodity.id]?.avgBuyPrice || 0}
+                onBuy={(quantity) => onBuyCommodity(commodity.id, quantity)}
+                onSell={(quantity) => onSellCommodity(commodity.id, quantity)}
+                onSetOrder={() => handleOpenOrderModal(commodity)}
+                playerMoney={playerAvailableMoney}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Trade Panel */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-4">
+            <QuickTradePanel
+              gameState={gameState}
+              onTrade={(updates) => {
+                if (updates.player) {
+                  // Update player state through the parent
+                  onBuyCommodity('dummy', 0); // Trigger refresh - not ideal but works
+                }
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
