@@ -20,8 +20,10 @@ import { TradingView } from './components/TradingView';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { LogView } from './components/LogView';
+import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
 import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
+import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -51,6 +53,9 @@ const App: React.FC = () => {
     marketNews: [],
     priceHistory: {},
     activeMiniGame: null,
+    currentDate: { month: 1, year: 1950 },
+    worldNewsHistory: [],
+    showWorldNews: false,
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
@@ -64,6 +69,13 @@ const App: React.FC = () => {
   }, []);
 
   const handleSelectEra = useCallback((era: Era) => {
+    // Initialize commodities with historical prices for the starting date
+    const initialCommodities = GameLogic.updateMarketPricesHistorical(
+      COMMODITIES_DATA,
+      era.startDate,
+      era
+    );
+
     setGameState(prev => ({
       ...prev,
       player: {
@@ -71,9 +83,13 @@ const App: React.FC = () => {
         money: era.startingMoney,
       },
       currentEra: era,
+      currentDate: era.startDate,
+      commodities: initialCommodities,
       gameTurn: 1,
       gameStarted: true,
-      gameLog: [GameLogic.createLog(`Welcome to the ${era.name} era! Your journey begins.`, 'event')],
+      worldNewsHistory: [],
+      showWorldNews: false,
+      gameLog: [GameLogic.createLog(`Welcome to the ${era.name} era! Your journey begins in ${era.startDate.year}.`, 'event')],
     }));
     setActiveView('MARKET');
   }, []);
@@ -86,7 +102,16 @@ const App: React.FC = () => {
       setGameState(prev => {
         // Use prev state instead of stale gameState closure
         const previousCommodities = { ...prev.commodities };
-        const updatedCommodities = GameLogic.updateMarketPrices(prev.commodities, prev.currentEra!, prev.player.skills);
+
+        // Advance the date by one month
+        const { newDate, newEra } = GameLogic.advanceGameDate(prev.currentDate, prev.currentEra!);
+
+        // Check for world news events for this date
+        const newsEvents = GameLogic.checkForWorldNews(newDate);
+        const hasNews = newsEvents.length > 0;
+
+        // Update commodities with historical prices
+        const updatedCommodities = GameLogic.updateMarketPricesHistorical(prev.commodities, newDate, newEra || prev.currentEra!);
         const income = GameLogic.calculatePlayerIncome(prev.player, prev.properties, prev.skills, updatedCommodities);
 
         let newPlayerState = { ...prev.player, money: prev.player.money + income };
@@ -144,17 +169,29 @@ const App: React.FC = () => {
           prev.gameTurn + 1
         );
 
+        // Prepare new logs for era transition
+        if (newEra) {
+          newLogs.push(GameLogic.createLog(`🎉 Era transition! Welcome to the ${newEra.name}!`, 'event'));
+        }
+
+        // Add news events to history
+        const updatedNewsHistory = [...prev.worldNewsHistory, ...newsEvents];
+
         return {
           ...prev,
           player: {
             ...newPlayerState,
             money: parseFloat(newPlayerState.money.toFixed(2)),
           },
+          currentDate: newDate,
+          currentEra: newEra || prev.currentEra,
           commodities: updatedCommodities,
           priceHistory: updatedPriceHistory,
           gameLog: [...prev.gameLog, ...newLogs].slice(-MAX_LOG_ENTRIES),
           gameTurn: prev.gameTurn + 1,
           isLoadingEvent: false,
+          worldNewsHistory: updatedNewsHistory,
+          showWorldNews: hasNews,
         };
       });
 
@@ -405,7 +442,9 @@ const App: React.FC = () => {
         <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
           American Dream Trader
         </h1>
-        <p className="text-sm text-gray-400">Era: {gameState.currentEra.name} | Turn: {gameState.gameTurn}</p>
+        <p className="text-sm text-gray-400">
+          Era: {gameState.currentEra.name} | {formatDate(gameState.currentDate)} | Turn: {gameState.gameTurn}
+        </p>
       </header>
       
       <div className="flex flex-1 overflow-hidden">
@@ -448,6 +487,14 @@ const App: React.FC = () => {
           job={gameState.jobs[gameState.activeMiniGame.jobId]}
           onClose={() => setGameState(prev => ({ ...prev, activeMiniGame: null }))}
           onComplete={handleMiniGameComplete}
+        />
+      )}
+
+      {gameState.showWorldNews && (
+        <WorldNewsModal
+          newsEvents={gameState.worldNewsHistory.slice(-5)} // Show last 5 news events
+          currentDate={gameState.currentDate}
+          onClose={() => setGameState(prev => ({ ...prev, showWorldNews: false }))}
         />
       )}
     </div>

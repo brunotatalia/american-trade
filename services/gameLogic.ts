@@ -1,6 +1,6 @@
 
 
-import { GameState, Commodity, Player, Property, Skill, LogEntry, GameEvent, Era, Order } from '../types';
+import { GameState, Commodity, Player, Property, Skill, LogEntry, GameEvent, Era, Order, GameDate, WorldNewsEvent } from '../types';
 import {
   SKILLS_DATA,
   COMMODITY_TRANSACTION_FEE,
@@ -13,9 +13,11 @@ import {
   BOND_YIELD_TREASURY,
   BOND_YIELD_CORPORATE,
   MARKET_DEPTH_IMPACT_THRESHOLD,
-  MAX_SLIPPAGE_PERCENT
+  MAX_SLIPPAGE_PERCENT,
+  ERAS_DATA
 } from '../constants';
 import { generateGameEventDescription, generateMarketNews, isGeminiAvailable } from './geminiService';
+import { getHistoricalPrice, advanceMonth, getNewsForDate, compareDates } from './historicalData';
 
 export const updateMarketPrices = (
     commodities: Record<string, Commodity>,
@@ -38,6 +40,66 @@ export const updateMarketPrices = (
     updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
   }
   return updatedCommodities;
+};
+
+/**
+ * Update market prices based on historical data
+ * Uses real historical prices when available, adds small random variation
+ */
+export const updateMarketPricesHistorical = (
+  commodities: Record<string, Commodity>,
+  currentDate: GameDate,
+  era: Era
+): Record<string, Commodity> => {
+  const updatedCommodities = { ...commodities };
+
+  for (const id in updatedCommodities) {
+    const commodity = updatedCommodities[id];
+    const historicalPrice = getHistoricalPrice(id, currentDate);
+
+    if (historicalPrice !== null) {
+      // Use historical price with small random variation to simulate intraday volatility
+      const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
+      const newPrice = historicalPrice * (1 + variation);
+      updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+    } else {
+      // Fall back to random price changes if no historical data available
+      let volatility = commodity.volatility * era.marketVolatilityModifier;
+      const priceChangePercentage = (Math.random() - 0.5) * 2 * volatility;
+      let newPrice = commodity.price * (1 + priceChangePercentage);
+      newPrice = Math.max(0.01, newPrice);
+      updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+    }
+  }
+
+  return updatedCommodities;
+};
+
+/**
+ * Advance the game date by one month
+ * Check if era transition is needed
+ */
+export const advanceGameDate = (currentDate: GameDate, currentEra: Era): { newDate: GameDate; newEra: Era | null } => {
+  const newDate = advanceMonth(currentDate);
+
+  // Check if we need to transition to a new era
+  if (compareDates(newDate, currentEra.endDate) > 0) {
+    // Find the next era
+    const currentEraIndex = ERAS_DATA.findIndex(e => e.id === currentEra.id);
+    if (currentEraIndex >= 0 && currentEraIndex < ERAS_DATA.length - 1) {
+      const nextEra = ERAS_DATA[currentEraIndex + 1];
+      return { newDate, newEra: nextEra };
+    }
+  }
+
+  return { newDate, newEra: null };
+};
+
+/**
+ * Check for world news events for the current date
+ */
+export const checkForWorldNews = (date: GameDate): WorldNewsEvent[] => {
+  return getNewsForDate(date);
 };
 
 // Price history tracking for charts
