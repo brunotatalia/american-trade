@@ -33,6 +33,10 @@ import { AchievementNotification } from './components/AchievementNotification';
 import { LogView } from './components/LogView';
 import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
+import { ToastContainer } from './components/ui/Toast';
+import { Tutorial, createTutorialSteps } from './components/Tutorial';
+import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
+import { useKeyboardShortcuts, KeyboardShortcut } from './hooks/useKeyboardShortcuts';
 import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon, PrestigeIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
@@ -78,11 +82,24 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
   const [showApiKeyWarning, setShowApiKeyWarning] = useState<boolean>(!isGeminiAvailable());
 
+  // UI/UX state
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: LogEntry['type'] }>>([]);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
   const addLogEntry = useCallback((message: string, type: LogEntry['type']) => {
     setGameState(prev => ({
       ...prev,
       gameLog: [...prev.gameLog.slice(-MAX_LOG_ENTRIES + 1), GameLogic.createLog(message, type)],
     }));
+
+    // Also show toast notification
+    const toastId = `toast-${Date.now()}-${Math.random()}`;
+    setToasts(prev => [...prev, { id: toastId, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
   const handleSelectEra = useCallback((era: Era) => {
@@ -600,6 +617,89 @@ const App: React.FC = () => {
     addLogEntry(`Upgraded ${bonus.name} to level ${currentLevel + 1}!`, 'success');
   }, [gameState.player.prestigeData, addLogEntry]);
 
+  // Keyboard shortcuts
+  const keyboardShortcuts: KeyboardShortcut[] = [
+    {
+      key: '?',
+      action: () => setShowKeyboardHelp(!showKeyboardHelp),
+      description: 'Toggle keyboard shortcuts help',
+      category: 'General'
+    },
+    {
+      key: 't',
+      action: () => setShowTutorial(!showTutorial),
+      description: 'Toggle tutorial',
+      category: 'General'
+    },
+    {
+      key: '1',
+      action: () => setActiveView('MARKET'),
+      description: 'Go to Market',
+      category: 'Navigation'
+    },
+    {
+      key: '2',
+      action: () => setActiveView('REAL_ESTATE'),
+      description: 'Go to Real Estate',
+      category: 'Navigation'
+    },
+    {
+      key: '3',
+      action: () => setActiveView('SKILLS'),
+      description: 'Go to Skills',
+      category: 'Navigation'
+    },
+    {
+      key: '4',
+      action: () => setActiveView('JOBS'),
+      description: 'Go to Jobs',
+      category: 'Navigation'
+    },
+    {
+      key: '5',
+      action: () => setActiveView('TRADING'),
+      description: 'Go to Trading',
+      category: 'Navigation'
+    },
+    {
+      key: '6',
+      action: () => setActiveView('CASINO'),
+      description: 'Go to Casino',
+      category: 'Navigation'
+    },
+    {
+      key: 'a',
+      action: () => setActiveView('ACHIEVEMENTS'),
+      description: 'Go to Achievements',
+      category: 'Navigation'
+    },
+    {
+      key: 's',
+      action: () => setActiveView('STATISTICS'),
+      description: 'Go to Statistics',
+      category: 'Navigation'
+    },
+    {
+      key: 'c',
+      action: () => setActiveView('DAILY_CHALLENGES'),
+      description: 'Go to Daily Challenges',
+      category: 'Navigation'
+    },
+    {
+      key: 'p',
+      action: () => setActiveView('PRESTIGE'),
+      description: 'Go to Prestige',
+      category: 'Navigation'
+    },
+    {
+      key: 'n',
+      action: () => setGameState(prev => ({ ...prev, showWorldNews: true })),
+      description: 'Show world news',
+      category: 'Actions'
+    }
+  ];
+
+  useKeyboardShortcuts(keyboardShortcuts, gameState.gameStarted);
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -692,12 +792,24 @@ const App: React.FC = () => {
               American Dream Trader
             </h1>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-3 text-xs">
             <button
               onClick={() => setGameState(prev => ({ ...prev, showWorldNews: true }))}
               className="text-blue-400 hover:text-blue-300 underline"
             >
               📰 News
+            </button>
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="text-green-400 hover:text-green-300 underline"
+            >
+              📚 Tutorial
+            </button>
+            <button
+              onClick={() => setShowKeyboardHelp(true)}
+              className="text-purple-400 hover:text-purple-300 underline"
+            >
+              ⌨️ Shortcuts
             </button>
           </div>
         </div>
@@ -761,6 +873,24 @@ const App: React.FC = () => {
       <AchievementNotification
         achievement={gameState.newAchievementUnlocked}
         onClose={() => setGameState(prev => ({ ...prev, newAchievementUnlocked: null }))}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+
+      {/* Tutorial System */}
+      <Tutorial
+        steps={createTutorialSteps('beginner')}
+        isActive={showTutorial}
+        onComplete={() => setShowTutorial(false)}
+        onSkip={() => setShowTutorial(false)}
+      />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
+        shortcuts={keyboardShortcuts}
       />
     </div>
   );
