@@ -13,6 +13,7 @@ import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
 import * as AchievementService from './services/achievementChecker';
 import { ACHIEVEMENTS } from './data/achievements';
+import { generateDailyChallenge } from './data/dailyChallenges';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -23,13 +24,14 @@ import { TradingView } from './components/TradingView';
 import { CasinoView } from './components/CasinoView';
 import { AchievementsView } from './components/AchievementsView';
 import { StatisticsView } from './components/StatisticsView';
+import { DailyChallengesView } from './components/DailyChallengesView';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { AchievementNotification } from './components/AchievementNotification';
 import { LogView } from './components/LogView';
 import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
@@ -434,6 +436,49 @@ const App: React.FC = () => {
     addLogEntry(message, winnings >= 0 ? 'success' : 'warning');
   }, [addLogEntry]);
 
+  const handleGenerateDailyChallenge = useCallback(() => {
+    const newChallenge = generateDailyChallenge(gameState.gameTurn);
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        dailyChallenge: newChallenge
+      }
+    }));
+    addLogEntry(`New daily challenge: ${newChallenge.description}`, 'info');
+  }, [gameState.gameTurn, addLogEntry]);
+
+  const handleCompleteDailyChallenge = useCallback(() => {
+    const challenge = gameState.player.dailyChallenge;
+    if (!challenge) return;
+
+    // Award rewards
+    setGameState(prev => {
+      let updatedState = {
+        ...prev,
+        player: {
+          ...prev.player,
+          money: prev.player.money + challenge.reward.money,
+          reputation: prev.player.reputation + challenge.reward.reputation,
+          dailyChallenge: null // Clear the challenge
+        }
+      };
+
+      // Check for achievements after reward
+      const newlyUnlocked = AchievementService.checkAchievements(updatedState);
+      if (newlyUnlocked.length > 0) {
+        updatedState = AchievementService.awardAchievement(updatedState, newlyUnlocked[0]);
+      }
+
+      return updatedState;
+    });
+
+    addLogEntry(
+      `Challenge completed! Earned $${challenge.reward.money} and ${challenge.reward.reputation} reputation!`,
+      'success'
+    );
+  }, [gameState.player.dailyChallenge, addLogEntry]);
+
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -477,6 +522,12 @@ const App: React.FC = () => {
         return <AchievementsView gameState={gameState} />;
       case 'STATISTICS':
         return <StatisticsView gameState={gameState} />;
+      case 'DAILY_CHALLENGES':
+        return <DailyChallengesView
+          gameState={gameState}
+          onGenerateChallenge={handleGenerateDailyChallenge}
+          onCompleteChallenge={handleCompleteDailyChallenge}
+        />;
       default:
         return <MarketView
                     gameState={gameState}
@@ -525,6 +576,7 @@ const App: React.FC = () => {
             <NavButton view="TRADING" label="Trading Platform" icon={<TrendUpIcon/>}/>
             <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
             <div className="mt-auto pt-4 border-t border-gray-700 space-y-2">
+                 <NavButton view="DAILY_CHALLENGES" label="Daily Challenges" icon={<DailyChallengesIcon/>}/>
                  <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
                  <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
             </div>

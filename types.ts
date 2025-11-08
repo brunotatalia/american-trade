@@ -231,4 +231,4 @@ export interface GameState {
   newAchievementUnlocked: Achievement | null; // For showing notification
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES';
