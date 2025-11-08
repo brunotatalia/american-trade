@@ -10,6 +10,25 @@ export const INITIAL_PLAYER_REPUTATION = 10;
 export const GAME_TICK_INTERVAL_MS = 10000; // 10 seconds per turn
 export const MAX_LOG_ENTRIES = 50;
 
+// Initial player statistics
+export const INITIAL_PLAYER_STATISTICS = {
+  totalTrades: 0,
+  profitableTrades: 0,
+  totalProfit: 0,
+  totalLoss: 0,
+  biggestWin: 0,
+  biggestLoss: 0,
+  totalGamblingWins: 0,
+  totalGamblingLosses: 0,
+  propertiesPurchased: 0,
+  skillsUnlocked: 0,
+  jobsCompleted: 0,
+  achievementsUnlocked: 0,
+  peakNetWorth: 0,
+  turnsPlayed: 0,
+  startDate: new Date()
+};
+
 // Transaction Fees & Taxes (realistic percentages)
 export const COMMODITY_TRANSACTION_FEE = 0.001; // 0.1% broker fee
 export const STOCK_TRANSACTION_FEE = 0.002; // 0.2% broker fee for stocks

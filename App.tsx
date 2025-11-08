@@ -6,10 +6,13 @@ import {
 } from './types';
 import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
-  COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, JOBS_DATA, API_KEY_WARNING
+  COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, JOBS_DATA, API_KEY_WARNING,
+  INITIAL_PLAYER_STATISTICS
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
+import * as AchievementService from './services/achievementChecker';
+import { ACHIEVEMENTS } from './data/achievements';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -18,12 +21,15 @@ import { SkillsView } from './components/SkillsView';
 import { JobsView } from './components/JobsView';
 import { TradingView } from './components/TradingView';
 import { CasinoView } from './components/CasinoView';
+import { AchievementsView } from './components/AchievementsView';
+import { StatisticsView } from './components/StatisticsView';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
+import { AchievementNotification } from './components/AchievementNotification';
 import { LogView } from './components/LogView';
 import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
@@ -40,6 +46,9 @@ const App: React.FC = () => {
       optionsContracts: [],
       leveragedPositions: [],
       tradingLevel: 1,
+      achievements: [],
+      statistics: INITIAL_PLAYER_STATISTICS,
+      dailyChallenge: null,
     },
     currentEra: null,
     commodities: COMMODITIES_DATA,
@@ -57,6 +66,8 @@ const App: React.FC = () => {
     currentDate: { month: 1, year: 1950 },
     worldNewsHistory: [],
     showWorldNews: false,
+    achievements: ACHIEVEMENTS,
+    newAchievementUnlocked: null,
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
@@ -226,6 +237,24 @@ const App: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.gameStarted]); // Only depend on gameStarted, not gameTurn
 
+  // Achievement Checking Effect - runs when game state changes
+  useEffect(() => {
+    if (!gameState.gameStarted) return;
+
+    // Check for newly unlocked achievements
+    const newlyUnlocked = AchievementService.checkAchievements(gameState);
+
+    if (newlyUnlocked.length > 0) {
+      // Award achievements one at a time (to avoid spam)
+      const achievement = newlyUnlocked[0];
+      setGameState(prev => AchievementService.awardAchievement(prev, achievement));
+    }
+
+    // Update peak net worth
+    const currentNetWorth = AchievementService.calculateNetWorth(gameState);
+    setGameState(prev => AchievementService.updatePeakNetWorth(prev, currentNetWorth));
+  }, [gameState.gameTurn, gameState.player.money, gameState.player.properties, gameState.player.skills]);
+
 
   const handleBuyCommodity = useCallback((commodityId: string, quantity: number) => {
     const commodity = gameState.commodities[commodityId];
@@ -376,13 +405,29 @@ const App: React.FC = () => {
   }, [gameState.player, gameState.commodities, addLogEntry]);
 
   const handleCasinoBet = useCallback((betAmount: number, winnings: number, gameType: string) => {
-    setGameState(prev => ({
-      ...prev,
-      player: {
-        ...prev.player,
-        money: prev.player.money + winnings
+    setGameState(prev => {
+      // Track gambling statistics
+      let updatedState = AchievementService.recordGambling(prev, winnings);
+
+      // Update money
+      updatedState = {
+        ...updatedState,
+        player: {
+          ...updatedState.player,
+          money: updatedState.player.money + winnings
+        }
+      };
+
+      // Check for achievements
+      const newlyUnlocked = AchievementService.checkAchievements(updatedState);
+      if (newlyUnlocked.length > 0) {
+        // Award first new achievement (show one at a time)
+        updatedState = AchievementService.awardAchievement(updatedState, newlyUnlocked[0]);
       }
-    }));
+
+      return updatedState;
+    });
+
     const message = winnings >= 0
       ? `Won $${winnings} playing ${gameType}!`
       : `Lost $${Math.abs(winnings)} playing ${gameType}.`;
@@ -428,6 +473,10 @@ const App: React.FC = () => {
                     gameState={gameState}
                     onBet={handleCasinoBet}
                 />;
+      case 'ACHIEVEMENTS':
+        return <AchievementsView gameState={gameState} />;
+      case 'STATISTICS':
+        return <StatisticsView gameState={gameState} />;
       default:
         return <MarketView
                     gameState={gameState}
@@ -475,8 +524,9 @@ const App: React.FC = () => {
             <NavButton view="JOBS" label="Jobs" icon={<MoneyIcon/>}/>
             <NavButton view="TRADING" label="Trading Platform" icon={<TrendUpIcon/>}/>
             <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
-            <div className="mt-auto">
-                 {/* Can add quick stats here or a mini-log preview */}
+            <div className="mt-auto pt-4 border-t border-gray-700 space-y-2">
+                 <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
+                 <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
             </div>
         </aside>
 
@@ -518,6 +568,11 @@ const App: React.FC = () => {
           onClose={() => setGameState(prev => ({ ...prev, showWorldNews: false }))}
         />
       )}
+
+      <AchievementNotification
+        achievement={gameState.newAchievementUnlocked}
+        onClose={() => setGameState(prev => ({ ...prev, newAchievementUnlocked: null }))}
+      />
     </div>
   );
 };
