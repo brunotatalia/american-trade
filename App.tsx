@@ -7,13 +7,14 @@ import {
 import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, JOBS_DATA, API_KEY_WARNING,
-  INITIAL_PLAYER_STATISTICS
+  INITIAL_PLAYER_STATISTICS, INITIAL_PRESTIGE_DATA
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
 import * as AchievementService from './services/achievementChecker';
 import { ACHIEVEMENTS } from './data/achievements';
 import { generateDailyChallenge } from './data/dailyChallenges';
+import { PRESTIGE_BONUSES, calculatePrestigePoints } from './data/prestigeBonuses';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -25,13 +26,14 @@ import { CasinoView } from './components/CasinoView';
 import { AchievementsView } from './components/AchievementsView';
 import { StatisticsView } from './components/StatisticsView';
 import { DailyChallengesView } from './components/DailyChallengesView';
+import { PrestigeView } from './components/PrestigeView';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { AchievementNotification } from './components/AchievementNotification';
 import { LogView } from './components/LogView';
 import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon, PrestigeIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
@@ -51,6 +53,7 @@ const App: React.FC = () => {
       achievements: [],
       statistics: INITIAL_PLAYER_STATISTICS,
       dailyChallenge: null,
+      prestigeData: INITIAL_PRESTIGE_DATA,
     },
     currentEra: null,
     commodities: COMMODITIES_DATA,
@@ -90,21 +93,29 @@ const App: React.FC = () => {
       era
     );
 
-    setGameState(prev => ({
-      ...prev,
-      player: {
-        ...prev.player,
-        money: era.startingMoney,
-      },
-      currentEra: era,
-      currentDate: era.startDate,
-      commodities: initialCommodities,
-      gameTurn: 1,
-      gameStarted: true,
-      worldNewsHistory: [],
-      showWorldNews: false,
-      gameLog: [GameLogic.createLog(`Welcome to the ${era.name} era! Your journey begins in ${era.startDate.year}.`, 'event')],
-    }));
+    setGameState(prev => {
+      // Apply prestige bonuses to starting money and reputation
+      const prestigeData = prev.player.prestigeData || INITIAL_PRESTIGE_DATA;
+      const startingCapitalBonus = (prestigeData.bonuses['STARTING_CAPITAL'] || 0) * 1000;
+      const startingReputationBonus = (prestigeData.bonuses['FAMOUS_START'] || 0) * 25;
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          money: era.startingMoney + startingCapitalBonus,
+          reputation: INITIAL_PLAYER_REPUTATION + startingReputationBonus,
+        },
+        currentEra: era,
+        currentDate: era.startDate,
+        commodities: initialCommodities,
+        gameTurn: 1,
+        gameStarted: true,
+        worldNewsHistory: [],
+        showWorldNews: false,
+        gameLog: [GameLogic.createLog(`Welcome to the ${era.name} era! Your journey begins in ${era.startDate.year}.`, 'event')],
+      };
+    });
     setActiveView('MARKET');
   }, []);
 
@@ -479,6 +490,116 @@ const App: React.FC = () => {
     );
   }, [gameState.player.dailyChallenge, addLogEntry]);
 
+  const handlePrestige = useCallback(() => {
+    const currentNetWorth = AchievementService.calculateNetWorth(gameState);
+    const achievementsCount = gameState.player.achievements.length;
+    const turnsPlayed = gameState.gameTurn;
+
+    // Calculate prestige points
+    const earnedPoints = calculatePrestigePoints(currentNetWorth, achievementsCount, turnsPlayed);
+
+    if (earnedPoints === 0) {
+      addLogEntry('You need at least $10,000 net worth to prestige!', 'warning');
+      return;
+    }
+
+    // Update lifetime stats
+    const prestigeData = gameState.player.prestigeData || INITIAL_PRESTIGE_DATA;
+    const updatedPrestigeData = {
+      ...prestigeData,
+      totalPrestigePoints: prestigeData.totalPrestigePoints + earnedPoints,
+      availablePrestigePoints: prestigeData.availablePrestigePoints + earnedPoints,
+      prestigeLevel: prestigeData.prestigeLevel + 1,
+      lifetimeStats: {
+        totalRuns: prestigeData.lifetimeStats.totalRuns + 1,
+        highestNetWorth: Math.max(prestigeData.lifetimeStats.highestNetWorth, currentNetWorth),
+        totalMoneyEarned: prestigeData.lifetimeStats.totalMoneyEarned + gameState.player.statistics.totalProfit,
+        totalAchievements: prestigeData.lifetimeStats.totalAchievements + achievementsCount,
+        totalTurnsPlayed: prestigeData.lifetimeStats.totalTurnsPlayed + turnsPlayed,
+        fastestMillionaire: currentNetWorth >= 1000000 && (prestigeData.lifetimeStats.fastestMillionaire === 0 || turnsPlayed < prestigeData.lifetimeStats.fastestMillionaire)
+          ? turnsPlayed
+          : prestigeData.lifetimeStats.fastestMillionaire,
+        mostPropertiesOwned: Math.max(prestigeData.lifetimeStats.mostPropertiesOwned, Object.keys(gameState.player.properties).length),
+        highestReputation: Math.max(prestigeData.lifetimeStats.highestReputation, gameState.player.reputation)
+      }
+    };
+
+    // Apply starting bonuses from prestige upgrades
+    const startingMoney = gameState.currentEra?.startingMoney || 10000;
+    const startingCapitalBonus = (prestigeData.bonuses['STARTING_CAPITAL'] || 0) * 1000;
+    const startingReputationBonus = (prestigeData.bonuses['FAMOUS_START'] || 0) * 25;
+
+    // Reset game state but keep prestige data
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        money: startingMoney + startingCapitalBonus,
+        reputation: INITIAL_PLAYER_REPUTATION + startingReputationBonus,
+        commodities: {},
+        properties: {},
+        skills: [],
+        orders: [],
+        currentJob: null,
+        jobPerformance: {},
+        optionsContracts: [],
+        leveragedPositions: [],
+        tradingLevel: 1,
+        achievements: [],
+        statistics: INITIAL_PLAYER_STATISTICS,
+        dailyChallenge: null,
+        prestigeData: updatedPrestigeData
+      },
+      gameTurn: 1,
+      gameLog: [GameLogic.createLog(`🌟 Prestige Level ${updatedPrestigeData.prestigeLevel}! Earned ${earnedPoints} prestige points!`, 'event')],
+      currentEvent: null,
+      currentDate: prev.currentEra!.startDate,
+      worldNewsHistory: [],
+      marketNews: [],
+      priceHistory: {}
+    }));
+
+    addLogEntry(`Prestiged to level ${updatedPrestigeData.prestigeLevel}! Starting fresh with ${earnedPoints} new prestige points.`, 'success');
+  }, [gameState, addLogEntry]);
+
+  const handleUpgradeBonus = useCallback((bonusId: string) => {
+    const bonus = PRESTIGE_BONUSES.find(b => b.id === bonusId);
+    if (!bonus) return;
+
+    const prestigeData = gameState.player.prestigeData || INITIAL_PRESTIGE_DATA;
+    const currentLevel = prestigeData.bonuses[bonusId] || 0;
+
+    if (currentLevel >= bonus.maxLevel) {
+      addLogEntry(`${bonus.name} is already at maximum level!`, 'warning');
+      return;
+    }
+
+    const cost = bonus.cost * (currentLevel + 1);
+
+    if (prestigeData.availablePrestigePoints < cost) {
+      addLogEntry(`Not enough prestige points! Need ${cost}, have ${prestigeData.availablePrestigePoints}.`, 'warning');
+      return;
+    }
+
+    // Upgrade the bonus
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        prestigeData: {
+          ...prestigeData,
+          availablePrestigePoints: prestigeData.availablePrestigePoints - cost,
+          bonuses: {
+            ...prestigeData.bonuses,
+            [bonusId]: currentLevel + 1
+          }
+        }
+      }
+    }));
+
+    addLogEntry(`Upgraded ${bonus.name} to level ${currentLevel + 1}!`, 'success');
+  }, [gameState.player.prestigeData, addLogEntry]);
+
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -527,6 +648,12 @@ const App: React.FC = () => {
           gameState={gameState}
           onGenerateChallenge={handleGenerateDailyChallenge}
           onCompleteChallenge={handleCompleteDailyChallenge}
+        />;
+      case 'PRESTIGE':
+        return <PrestigeView
+          gameState={gameState}
+          onPrestige={handlePrestige}
+          onUpgradeBonus={handleUpgradeBonus}
         />;
       default:
         return <MarketView
@@ -586,6 +713,7 @@ const App: React.FC = () => {
             <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
             <div className="mt-auto pt-2 border-t border-gray-700 space-y-1.5">
                  <NavButton view="DAILY_CHALLENGES" label="Challenges" icon={<DailyChallengesIcon/>}/>
+                 <NavButton view="PRESTIGE" label="Prestige" icon={<PrestigeIcon/>}/>
                  <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
                  <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
             </div>

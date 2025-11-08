@@ -29,6 +29,24 @@ export const INITIAL_PLAYER_STATISTICS = {
   startDate: new Date()
 };
 
+// Initial prestige data
+export const INITIAL_PRESTIGE_DATA = {
+  totalPrestigePoints: 0,
+  availablePrestigePoints: 0,
+  prestigeLevel: 0,
+  bonuses: {},
+  lifetimeStats: {
+    totalRuns: 0,
+    highestNetWorth: 0,
+    totalMoneyEarned: 0,
+    totalAchievements: 0,
+    totalTurnsPlayed: 0,
+    fastestMillionaire: 0,
+    mostPropertiesOwned: 0,
+    highestReputation: 0
+  }
+};
+
 // Transaction Fees & Taxes (realistic percentages)
 export const COMMODITY_TRANSACTION_FEE = 0.001; // 0.1% broker fee
 export const STOCK_TRANSACTION_FEE = 0.002; // 0.2% broker fee for stocks

@@ -159,5 +159,3 @@ export const SkillProgress: React.FC<SkillProgressProps> = ({ current, max, labe
     </div>
   );
 };
-
-<parameter name="file_path">/home/user/american-trade/components/ui/ProgressBar.tsx
