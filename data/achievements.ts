@@ -447,5 +447,241 @@ export const ACHIEVEMENTS: Achievement[] = [
       return gs.player.achievements.length >= nonSecretAchievements.length;
     },
     reward: { money: 100000, reputation: 500 }
+  },
+
+  // ADDITIONAL TRADING ACHIEVEMENTS
+  {
+    id: 'SPEED_TRADER',
+    name: 'Speed Trader',
+    description: 'Complete 20 trades in a single turn',
+    category: 'trading',
+    icon: '⚡',
+    rarity: 'rare',
+    requirement: (gs) => (gs.player.statistics?.totalTrades || 0) >= 20,
+    reward: { money: 5000, reputation: 25 }
+  },
+  {
+    id: 'CONSISTENT_TRADER',
+    name: 'Consistent Trader',
+    description: 'Make 50 profitable trades with zero losses',
+    category: 'trading',
+    icon: '📊',
+    rarity: 'epic',
+    secret: true,
+    requirement: (gs) => {
+      const stats = gs.player.statistics;
+      if (!stats) return false;
+      return stats.profitableTrades >= 50 && stats.totalTrades === stats.profitableTrades;
+    },
+    reward: { money: 20000, reputation: 100 }
+  },
+  {
+    id: 'RECOVERY_MASTER',
+    name: 'Recovery Master',
+    description: 'Recover from a $10,000 loss to make a profit',
+    category: 'trading',
+    icon: '🔄',
+    rarity: 'rare',
+    requirement: (gs) => (gs.player.statistics?.biggestLoss || 0) >= 10000 && (gs.player.statistics?.totalProfit || 0) > 0,
+    reward: { money: 7500, reputation: 40 }
+  },
+
+  // ADDITIONAL WEALTH ACHIEVEMENTS
+  {
+    id: 'HUNDRED_GRAND',
+    name: 'Six Figures',
+    description: 'Accumulate $100,000 in cash',
+    category: 'wealth',
+    icon: '💵',
+    rarity: 'epic',
+    requirement: (gs) => gs.player.money >= 100000,
+    reward: { money: 10000, reputation: 50 }
+  },
+  {
+    id: 'HALF_MILLION',
+    name: 'Half Millionaire',
+    description: 'Accumulate $500,000 in cash',
+    category: 'wealth',
+    icon: '💎',
+    rarity: 'epic',
+    requirement: (gs) => gs.player.money >= 500000,
+    reward: { money: 25000, reputation: 100 }
+  },
+  {
+    id: 'BANKRUPTCY_SURVIVOR',
+    name: 'Bankruptcy Survivor',
+    description: 'Reach $0 and recover to $50,000',
+    category: 'wealth',
+    icon: '🦅',
+    rarity: 'rare',
+    secret: true,
+    requirement: (gs) => {
+      // This would need tracking of historical minimum money
+      return gs.player.money >= 50000;
+    },
+    reward: { money: 15000, reputation: 75 }
+  },
+
+  // REPUTATION ACHIEVEMENTS
+  {
+    id: 'RESPECTED',
+    name: 'Respected',
+    description: 'Reach 500 reputation',
+    category: 'special',
+    icon: '⭐',
+    rarity: 'rare',
+    requirement: (gs) => gs.player.reputation >= 500,
+    reward: { money: 10000, reputation: 50 }
+  },
+  {
+    id: 'RENOWNED',
+    name: 'Renowned',
+    description: 'Reach 1000 reputation',
+    category: 'special',
+    icon: '🌟',
+    rarity: 'epic',
+    requirement: (gs) => gs.player.reputation >= 1000,
+    reward: { money: 25000, reputation: 100 }
+  },
+  {
+    id: 'LEGENDARY_STATUS',
+    name: 'Legendary Status',
+    description: 'Reach 2500 reputation',
+    category: 'special',
+    icon: '👑',
+    rarity: 'legendary',
+    requirement: (gs) => gs.player.reputation >= 2500,
+    reward: { money: 100000, reputation: 250 }
+  },
+
+  // PROPERTY ACHIEVEMENTS
+  {
+    id: 'REAL_ESTATE_BARON',
+    name: 'Real Estate Baron',
+    description: 'Own 10 properties',
+    category: 'property',
+    icon: '🏰',
+    rarity: 'epic',
+    requirement: (gs) => Object.keys(gs.player.properties).length >= 10,
+    reward: { money: 50000, reputation: 100 }
+  },
+
+  // SKILL ACHIEVEMENTS
+  {
+    id: 'MASTER_OF_ALL',
+    name: 'Master of All',
+    description: 'Unlock all available skills',
+    category: 'skills',
+    icon: '🎓',
+    rarity: 'legendary',
+    requirement: (gs) => gs.player.skills.length >= Object.keys(gs.skills).length,
+    reward: { money: 50000, reputation: 200 }
+  },
+
+  // JOBS ACHIEVEMENTS
+  {
+    id: 'WORKAHOLIC',
+    name: 'Workaholic',
+    description: 'Complete 100 work shifts',
+    category: 'jobs',
+    icon: '💼',
+    rarity: 'epic',
+    requirement: (gs) => (gs.player.statistics?.jobsCompleted || 0) >= 100,
+    reward: { money: 10000, reputation: 50 }
+  },
+  {
+    id: 'JOB_MASTER',
+    name: 'Job Master',
+    description: 'Work at least 5 different jobs',
+    category: 'jobs',
+    icon: '🎯',
+    rarity: 'rare',
+    requirement: (gs) => Object.keys(gs.player.jobPerformance).length >= 5,
+    reward: { money: 7500, reputation: 40 }
+  },
+
+  // GAMBLING ACHIEVEMENTS
+  {
+    id: 'HIGH_ROLLER',
+    name: 'High Roller',
+    description: 'Win $50,000+ from gambling',
+    category: 'gambling',
+    icon: '🎰',
+    rarity: 'epic',
+    secret: true,
+    requirement: (gs) => {
+      const stats = gs.player.statistics;
+      if (!stats) return false;
+      const netGambling = (stats.totalGamblingWins || 0) - (stats.totalGamblingLosses || 0);
+      return netGambling >= 50000;
+    },
+    reward: { money: 25000, reputation: 100 }
+  },
+  {
+    id: 'GAMBLER_REFORMED',
+    name: 'Reformed Gambler',
+    description: 'Lose $20,000 gambling then quit while ahead',
+    category: 'gambling',
+    icon: '🚫',
+    rarity: 'rare',
+    secret: true,
+    requirement: (gs) => (gs.player.statistics?.totalGamblingLosses || 0) >= 20000,
+    reward: { money: 10000, reputation: 50 }
+  },
+
+  // COMBO & SPECIAL ACHIEVEMENTS
+  {
+    id: 'TRIPLE_THREAT',
+    name: 'Triple Threat',
+    description: 'Own $50k cash, 5 properties, and 50k in commodities',
+    category: 'special',
+    icon: '🔱',
+    rarity: 'epic',
+    requirement: (gs) => {
+      const commodityValue = Object.keys(gs.player.commodities).reduce((sum, commId) => {
+        const comm = gs.commodities[commId];
+        const playerComm = gs.player.commodities[commId];
+        return sum + (comm ? comm.price * playerComm.quantity : 0);
+      }, 0);
+      return gs.player.money >= 50000 &&
+             Object.keys(gs.player.properties).length >= 5 &&
+             commodityValue >= 50000;
+    },
+    reward: { money: 30000, reputation: 150 }
+  },
+  {
+    id: 'EARLY_BIRD',
+    name: 'Early Bird',
+    description: 'Reach $100,000 before turn 50',
+    category: 'special',
+    icon: '🐦',
+    rarity: 'epic',
+    secret: true,
+    requirement: (gs) => gs.player.money >= 100000 && gs.gameTurn <= 50,
+    reward: { money: 25000, reputation: 100 }
+  },
+  {
+    id: 'MARATHON_RUNNER',
+    name: 'Marathon Runner',
+    description: 'Play for 500 turns',
+    category: 'special',
+    icon: '🏃',
+    rarity: 'rare',
+    requirement: (gs) => gs.gameTurn >= 500,
+    reward: { money: 50000, reputation: 100 }
+  },
+  {
+    id: 'IRON_WILL',
+    name: 'Iron Will',
+    description: 'Never drop below $1,000 after reaching $100,000',
+    category: 'wealth',
+    icon: '🛡️',
+    rarity: 'legendary',
+    secret: true,
+    requirement: (gs) => {
+      // This would need tracking of minimum money after peak
+      return (gs.player.statistics?.peakNetWorth || 0) >= 100000 && gs.player.money >= 1000;
+    },
+    reward: { money: 50000, reputation: 200 }
   }
 ];
