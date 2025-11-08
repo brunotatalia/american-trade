@@ -229,6 +229,39 @@ export interface GameState {
   showWorldNews: boolean; // Flag to display monthly news
   achievements: Achievement[]; // All available achievements
   newAchievementUnlocked: Achievement | null; // For showing notification
+  prestige: PrestigeData; // Prestige system data (persists across runs)
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE';
+
+// Prestige / New Game+ System
+export interface PrestigeBonus {
+  id: string;
+  name: string;
+  description: string;
+  cost: number; // Prestige points required per level
+  icon: string;
+  effect: {
+    type: 'starting_money' | 'starting_reputation' | 'skill_discount' | 'property_discount' | 'job_earnings' | 'trade_bonus' | 'unlock_speed' | 'event_frequency';
+    value: number; // Percentage or flat bonus per level
+  };
+  maxLevel: number;
+}
+
+export interface PrestigeData {
+  totalPrestigePoints: number; // Earned from all previous runs
+  availablePrestigePoints: number; // Unspent points
+  prestigeLevel: number; // Number of times prestiged
+  bonuses: Record<string, number>; // Bonus ID -> current level
+  lifetimeStats: {
+    totalMoneyEarned: number;
+    totalTradesCompleted: number;
+    totalAchievementsUnlocked: number;
+    totalTurnsPlayed: number;
+    bestRun: {
+      money: number;
+      turn: number;
+      achievements: number;
+    };
+  };
+}

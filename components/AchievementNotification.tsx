@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Achievement } from '../types';
+import { CelebrationEffect, FireworksEffect } from './effects/CelebrationEffect';
 
 interface AchievementNotificationProps {
   achievement: Achievement | null;
@@ -11,10 +12,20 @@ export const AchievementNotification: React.FC<AchievementNotificationProps> = (
   onClose
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showFireworks, setShowFireworks] = useState(false);
 
   useEffect(() => {
     if (achievement) {
       setIsVisible(true);
+
+      // Trigger celebration based on rarity
+      if (achievement.rarity === 'legendary' || achievement.rarity === 'epic') {
+        setShowFireworks(true);
+      } else {
+        setShowCelebration(true);
+      }
+
       // Auto-dismiss after 5 seconds
       const timer = setTimeout(() => {
         setIsVisible(false);
@@ -47,11 +58,22 @@ export const AchievementNotification: React.FC<AchievementNotificationProps> = (
   };
 
   return (
-    <div
-      className={`fixed top-20 right-4 z-50 transition-all duration-300 ${
-        isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
-      }`}
-    >
+    <>
+      {/* Celebration Effects */}
+      <CelebrationEffect
+        trigger={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
+      <FireworksEffect
+        trigger={showFireworks}
+        onComplete={() => setShowFireworks(false)}
+      />
+
+      <div
+        className={`fixed top-20 right-4 z-50 transition-all duration-300 ${
+          isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+        }`}
+      >
       <div
         className={`bg-gradient-to-br ${getRarityColor(achievement.rarity)} border-2 border-yellow-400 rounded-lg shadow-2xl ${getRarityGlow(achievement.rarity)} p-4 max-w-sm cursor-pointer hover:scale-105 transition-transform`}
         onClick={() => {
@@ -114,13 +136,14 @@ export const AchievementNotification: React.FC<AchievementNotificationProps> = (
       <style>{`
         @keyframes bounce {
           0%, 100% {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
           50% {
-            transform: translateY(-10px);
+            transform: translateY(-10px) scale(1.05);
           }
         }
       `}</style>
     </div>
+    </>
   );
 };
