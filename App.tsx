@@ -551,44 +551,53 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen max-w-7xl mx-auto">
+    <div className="flex flex-col h-screen max-w-full">
       {showApiKeyWarning && (
-        <div className="bg-yellow-500 text-black p-2 text-center text-sm">
-          {API_KEY_WARNING} Some features like dynamic events and news might be limited or use placeholders.
-          <Button size="sm" variant="ghost" onClick={() => setShowApiKeyWarning(false)} className="ml-4 !text-black !border-black">Dismiss</Button>
+        <div className="bg-yellow-500 text-black px-3 py-1.5 text-center text-xs">
+          {API_KEY_WARNING}
+          <Button size="sm" variant="ghost" onClick={() => setShowApiKeyWarning(false)} className="ml-2 !text-black !border-black !text-xs !py-0.5">Dismiss</Button>
         </div>
       )}
-      <header className="p-4 bg-gray-800 shadow-md">
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-          American Dream Trader
-        </h1>
-        <p className="text-sm text-gray-400">
-          Era: {gameState.currentEra.name} | {formatDate(gameState.currentDate)} | Turn: {gameState.gameTurn}
-        </p>
+      <header className="px-4 py-2 bg-gray-800 shadow-md">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+              American Dream Trader
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <button
+              onClick={() => setGameState(prev => ({ ...prev, showWorldNews: true }))}
+              className="text-blue-400 hover:text-blue-300 underline"
+            >
+              📰 News
+            </button>
+          </div>
+        </div>
       </header>
-      
+
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 flex flex-col">
+        <aside className="w-48 bg-gray-800 px-2 py-3 space-y-1.5 border-r border-gray-700 flex flex-col">
             <NavButton view="MARKET" label="Market" icon={<CommodityIcon/>}/>
             <NavButton view="REAL_ESTATE" label="Real Estate" icon={<PropertyIcon/>}/>
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
             <NavButton view="JOBS" label="Jobs" icon={<MoneyIcon/>}/>
-            <NavButton view="TRADING" label="Trading Platform" icon={<TrendUpIcon/>}/>
+            <NavButton view="TRADING" label="Trading" icon={<TrendUpIcon/>}/>
             <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
-            <div className="mt-auto pt-4 border-t border-gray-700 space-y-2">
-                 <NavButton view="DAILY_CHALLENGES" label="Daily Challenges" icon={<DailyChallengesIcon/>}/>
+            <div className="mt-auto pt-2 border-t border-gray-700 space-y-1.5">
+                 <NavButton view="DAILY_CHALLENGES" label="Challenges" icon={<DailyChallengesIcon/>}/>
                  <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
                  <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
             </div>
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-gray-850 p-1 border-b border-gray-700"> {/* Slightly different shade for dashboard */}
+            <div className="bg-gray-850 border-b border-gray-700">
                  <Dashboard gameState={gameState} />
             </div>
             <div className="flex-1 overflow-y-auto bg-gray-900">
-                 {gameState.isLoadingEvent && activeView === 'MARKET' && ( // Show loading only if relevant view active
-                    <div className="p-4 text-center text-yellow-400">
+                 {gameState.isLoadingEvent && activeView === 'MARKET' && (
+                    <div className="p-3 text-center text-yellow-400 text-sm">
                         <LoadingSpinnerIcon className="inline-block mr-2"/> Processing turn...
                     </div>
                 )}
