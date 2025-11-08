@@ -85,6 +85,9 @@ export interface Player {
   optionsContracts: OptionsContract[];
   leveragedPositions: LeveragedPosition[];
   tradingLevel: number; // Unlocks more leverage options
+  achievements: UnlockedAchievement[]; // Unlocked achievements
+  statistics: PlayerStatistics; // Lifetime stats
+  dailyChallenge: DailyChallenge | null; // Current daily challenge
 }
 
 export interface Commodity {
@@ -143,6 +146,50 @@ export interface WorldNewsEvent {
   };
 }
 
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: 'wealth' | 'trading' | 'property' | 'skills' | 'jobs' | 'special' | 'gambling';
+  icon: string; // Emoji or icon identifier
+  requirement: (gameState: GameState) => boolean;
+  reward?: { money?: number; reputation?: number; };
+  secret?: boolean; // Hidden until unlocked
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface UnlockedAchievement {
+  achievementId: string;
+  unlockedAtTurn: number;
+  unlockedDate: GameDate;
+}
+
+export interface DailyChallenge {
+  id: string;
+  description: string;
+  goal: (gameState: GameState) => boolean;
+  reward: { money: number; reputation: number; };
+  expiresAtTurn: number;
+}
+
+export interface PlayerStatistics {
+  totalTrades: number;
+  profitableTrades: number;
+  totalProfit: number;
+  totalLoss: number;
+  biggestWin: number;
+  biggestLoss: number;
+  totalGamblingWins: number;
+  totalGamblingLosses: number;
+  propertiesPurchased: number;
+  skillsUnlocked: number;
+  jobsCompleted: number;
+  achievementsUnlocked: number;
+  peakNetWorth: number;
+  turnsPlayed: number;
+  startDate: Date;
+}
+
 export interface Era {
   id: string;
   name: string;
@@ -180,6 +227,8 @@ export interface GameState {
   currentDate: GameDate; // Current in-game date
   worldNewsHistory: WorldNewsEvent[]; // Historical news events
   showWorldNews: boolean; // Flag to display monthly news
+  achievements: Achievement[]; // All available achievements
+  newAchievementUnlocked: Achievement | null; // For showing notification
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS';
