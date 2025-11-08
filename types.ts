@@ -18,7 +18,7 @@ export interface Job {
   basePayPerTurn: number;
   requiredSkills: string[];
   description: string;
-  miniGameType: 'math_quiz' | 'pattern_match' | 'data_entry' | 'cargo_load' | 'assembly_line' | 'delivery_route';
+  miniGameType: 'math_quiz' | 'pattern_match' | 'data_entry' | 'cargo_load' | 'assembly_line' | 'delivery_route' | 'word_scramble' | 'trivia_quiz' | 'negotiation';
   difficulty: 'easy' | 'medium' | 'hard';
   icon?: React.ReactNode;
 }
@@ -182,4 +182,4 @@ export interface GameState {
   showWorldNews: boolean; // Flag to display monthly news
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'NEWS';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS';

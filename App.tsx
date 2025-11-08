@@ -17,12 +17,13 @@ import { RealEstateView } from './components/RealEstateView';
 import { SkillsView } from './components/SkillsView';
 import { JobsView } from './components/JobsView';
 import { TradingView } from './components/TradingView';
+import { CasinoView } from './components/CasinoView';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { LogView } from './components/LogView';
 import { WorldNewsModal } from './components/WorldNewsModal';
 import { Button } from './components/ui/Button';
-import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
@@ -374,6 +375,20 @@ const App: React.FC = () => {
     if (result.log) addLogEntry(result.log.message, result.log.type);
   }, [gameState.player, gameState.commodities, addLogEntry]);
 
+  const handleCasinoBet = useCallback((betAmount: number, winnings: number, gameType: string) => {
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        money: prev.player.money + winnings
+      }
+    }));
+    const message = winnings >= 0
+      ? `Won $${winnings} playing ${gameType}!`
+      : `Lost $${Math.abs(winnings)} playing ${gameType}.`;
+    addLogEntry(message, winnings >= 0 ? 'success' : 'warning');
+  }, [addLogEntry]);
+
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -407,6 +422,11 @@ const App: React.FC = () => {
                     onSellOption={handleSellOption}
                     onOpenLeveragePosition={handleOpenLeveragePosition}
                     onCloseLeveragePosition={handleCloseLeveragePosition}
+                />;
+      case 'CASINO':
+        return <CasinoView
+                    gameState={gameState}
+                    onBet={handleCasinoBet}
                 />;
       default:
         return <MarketView
@@ -454,6 +474,7 @@ const App: React.FC = () => {
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
             <NavButton view="JOBS" label="Jobs" icon={<MoneyIcon/>}/>
             <NavButton view="TRADING" label="Trading Platform" icon={<TrendUpIcon/>}/>
+            <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
             <div className="mt-auto">
                  {/* Can add quick stats here or a mini-log preview */}
             </div>

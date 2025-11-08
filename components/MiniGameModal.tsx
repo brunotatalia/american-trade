@@ -7,6 +7,9 @@ import { DataEntry } from './minigames/DataEntry';
 import { CargoLoad } from './minigames/CargoLoad';
 import { AssemblyLine } from './minigames/AssemblyLine';
 import { DeliveryRoute } from './minigames/DeliveryRoute';
+import { WordScramble } from './minigames/WordScramble';
+import { TriviaQuiz } from './minigames/TriviaQuiz';
+import { Negotiation } from './minigames/Negotiation';
 
 interface MiniGameModalProps {
   job: Job | null;
@@ -40,6 +43,12 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ job, onClose, onCo
         return <AssemblyLine {...props} />;
       case 'delivery_route':
         return <DeliveryRoute {...props} />;
+      case 'word_scramble':
+        return <WordScramble {...props} />;
+      case 'trivia_quiz':
+        return <TriviaQuiz {...props} />;
+      case 'negotiation':
+        return <Negotiation {...props} />;
       default:
         return <div className="p-4 text-center">Game type not found</div>;
     }
