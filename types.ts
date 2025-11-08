@@ -88,6 +88,8 @@ export interface Player {
   achievements: UnlockedAchievement[]; // Unlocked achievements
   statistics: PlayerStatistics; // Lifetime stats
   dailyChallenge: DailyChallenge | null; // Current daily challenge
+  prestigeData?: PrestigeData; // Prestige/New Game+ data
+  progressionData?: ProgressionData; // Progression & milestones tracking
 }
 
 export interface Commodity {
@@ -232,7 +234,7 @@ export interface GameState {
   prestige: PrestigeData; // Prestige system data (persists across runs)
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE' | 'MILESTONES';
 
 // Prestige / New Game+ System
 export interface PrestigeBonus {
@@ -264,4 +266,45 @@ export interface PrestigeData {
       achievements: number;
     };
   };
+}
+
+// Progression & Milestones System
+export interface ReputationTier {
+  id: string;
+  name: string;
+  minReputation: number;
+  maxReputation: number;
+  description: string;
+  icon: string;
+  color: string; // Tailwind color class
+  unlocks: string[]; // Description of what unlocks
+}
+
+export interface Milestone {
+  id: string;
+  name: string;
+  description: string;
+  category: 'wealth' | 'property' | 'trading' | 'career' | 'skills' | 'reputation' | 'special';
+  requirement: (gameState: GameState) => boolean;
+  reward?: { money?: number; reputation?: number; unlocks?: string[] };
+  icon: string;
+  order: number; // Display order in milestone tree
+}
+
+export interface UnlockRequirement {
+  type: 'reputation' | 'networth' | 'achievement' | 'milestone' | 'era' | 'skill' | 'property';
+  value: number | string; // Numeric threshold or ID
+  description: string;
+}
+
+export interface ProgressionData {
+  currentReputationTier: string;
+  unlockedMilestones: string[];
+  unlockedContent: {
+    properties: string[];
+    jobs: string[];
+    skills: string[];
+    eras: string[];
+  };
+  milestonesToShow: string[]; // Next milestones to display
 }

@@ -47,6 +47,19 @@ export const INITIAL_PRESTIGE_DATA = {
   }
 };
 
+// Initial progression data
+export const INITIAL_PROGRESSION_DATA = {
+  currentReputationTier: 'UNKNOWN',
+  unlockedMilestones: [],
+  unlockedContent: {
+    properties: [],
+    jobs: [],
+    skills: [],
+    eras: []
+  },
+  milestonesToShow: []
+};
+
 // Transaction Fees & Taxes (realistic percentages)
 export const COMMODITY_TRANSACTION_FEE = 0.001; // 0.1% broker fee
 export const STOCK_TRANSACTION_FEE = 0.002; // 0.2% broker fee for stocks

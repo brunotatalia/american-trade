@@ -7,7 +7,7 @@ import {
 import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, JOBS_DATA, API_KEY_WARNING,
-  INITIAL_PLAYER_STATISTICS, INITIAL_PRESTIGE_DATA
+  INITIAL_PLAYER_STATISTICS, INITIAL_PRESTIGE_DATA, INITIAL_PROGRESSION_DATA
 } from './constants';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
@@ -15,6 +15,7 @@ import * as AchievementService from './services/achievementChecker';
 import { ACHIEVEMENTS } from './data/achievements';
 import { generateDailyChallenge } from './data/dailyChallenges';
 import { PRESTIGE_BONUSES, calculatePrestigePoints } from './data/prestigeBonuses';
+import { checkNewMilestones, getReputationTier } from './data/progression';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -27,6 +28,8 @@ import { AchievementsView } from './components/AchievementsView';
 import { StatisticsView } from './components/StatisticsView';
 import { DailyChallengesView } from './components/DailyChallengesView';
 import { PrestigeView } from './components/PrestigeView';
+import { MilestonesView } from './components/MilestonesView';
+import { MilestoneNotification } from './components/MilestoneNotification';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { AchievementNotification } from './components/AchievementNotification';
@@ -37,7 +40,7 @@ import { ToastContainer } from './components/ui/Toast';
 import { Tutorial, createTutorialSteps } from './components/Tutorial';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { useKeyboardShortcuts, KeyboardShortcut } from './hooks/useKeyboardShortcuts';
-import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon, PrestigeIcon } from './components/icons';
+import { CommodityIcon, PropertyIcon, SkillIcon, MoneyIcon, TrendUpIcon, NewsIcon, LoadingSpinnerIcon, CasinoIcon, AchievementsIcon, StatisticsIcon, DailyChallengesIcon, PrestigeIcon, MilestonesIcon } from './components/icons';
 import { formatDate } from './services/historicalData';
 
 const App: React.FC = () => {
@@ -58,6 +61,7 @@ const App: React.FC = () => {
       statistics: INITIAL_PLAYER_STATISTICS,
       dailyChallenge: null,
       prestigeData: INITIAL_PRESTIGE_DATA,
+      progressionData: INITIAL_PROGRESSION_DATA,
     },
     currentEra: null,
     commodities: COMMODITIES_DATA,
@@ -86,6 +90,7 @@ const App: React.FC = () => {
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: LogEntry['type'] }>>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [newMilestoneUnlocked, setNewMilestoneUnlocked] = useState<import('./types').Milestone | null>(null);
 
   const addLogEntry = useCallback((message: string, type: LogEntry['type']) => {
     setGameState(prev => ({
@@ -284,6 +289,70 @@ const App: React.FC = () => {
     const currentNetWorth = AchievementService.calculateNetWorth(gameState);
     setGameState(prev => AchievementService.updatePeakNetWorth(prev, currentNetWorth));
   }, [gameState.gameTurn, gameState.player.money, gameState.player.properties, gameState.player.skills]);
+
+  // Milestone Checking Effect - runs when game state changes
+  useEffect(() => {
+    if (!gameState.gameStarted) return;
+
+    // Check for newly completed milestones
+    const newMilestones = checkNewMilestones(gameState);
+
+    if (newMilestones.length > 0) {
+      // Award milestones one at a time (to avoid spam)
+      const milestone = newMilestones[0];
+
+      // Award rewards
+      setGameState(prev => {
+        const updated = { ...prev };
+        if (milestone.reward) {
+          if (milestone.reward.money) {
+            updated.player = { ...prev.player, money: prev.player.money + milestone.reward.money };
+          }
+          if (milestone.reward.reputation) {
+            updated.player = { ...updated.player, reputation: updated.player.reputation + milestone.reward.reputation };
+          }
+        }
+
+        // Mark milestone as unlocked
+        const unlockedMilestones = prev.player.progressionData?.unlockedMilestones || [];
+        updated.player = {
+          ...updated.player,
+          progressionData: {
+            ...INITIAL_PROGRESSION_DATA,
+            ...prev.player.progressionData,
+            unlockedMilestones: [...unlockedMilestones, milestone.id],
+            currentReputationTier: getReputationTier(updated.player.reputation).id
+          }
+        };
+
+        return updated;
+      });
+
+      // Show milestone notification
+      setNewMilestoneUnlocked(milestone);
+
+      // Log milestone achievement
+      addLogEntry(`🏆 Milestone: ${milestone.name}!`, 'success');
+    }
+
+    // Update reputation tier
+    const currentTier = getReputationTier(gameState.player.reputation);
+    const savedTier = gameState.player.progressionData?.currentReputationTier;
+    if (currentTier.id !== savedTier) {
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          progressionData: {
+            ...INITIAL_PROGRESSION_DATA,
+            ...prev.player.progressionData,
+            currentReputationTier: currentTier.id
+          }
+        }
+      }));
+      addLogEntry(`⭐ Reputation Tier Up: ${currentTier.name}!`, 'event');
+    }
+  }, [gameState.gameTurn, gameState.player.money, gameState.player.reputation, gameState.player.properties, gameState.player.skills, addLogEntry]);
 
 
   const handleBuyCommodity = useCallback((commodityId: string, quantity: number) => {
@@ -692,6 +761,12 @@ const App: React.FC = () => {
       category: 'Navigation'
     },
     {
+      key: 'm',
+      action: () => setActiveView('MILESTONES'),
+      description: 'Go to Milestones',
+      category: 'Navigation'
+    },
+    {
       key: 'n',
       action: () => setGameState(prev => ({ ...prev, showWorldNews: true })),
       description: 'Show world news',
@@ -755,6 +830,8 @@ const App: React.FC = () => {
           onPrestige={handlePrestige}
           onUpgradeBonus={handleUpgradeBonus}
         />;
+      case 'MILESTONES':
+        return <MilestonesView gameState={gameState} />;
       default:
         return <MarketView
                     gameState={gameState}
@@ -825,6 +902,7 @@ const App: React.FC = () => {
             <NavButton view="CASINO" label="Casino" icon={<CasinoIcon/>}/>
             <div className="mt-auto pt-2 border-t border-gray-700 space-y-1.5">
                  <NavButton view="DAILY_CHALLENGES" label="Challenges" icon={<DailyChallengesIcon/>}/>
+                 <NavButton view="MILESTONES" label="Milestones" icon={<MilestonesIcon/>}/>
                  <NavButton view="PRESTIGE" label="Prestige" icon={<PrestigeIcon/>}/>
                  <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
                  <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
@@ -873,6 +951,12 @@ const App: React.FC = () => {
       <AchievementNotification
         achievement={gameState.newAchievementUnlocked}
         onClose={() => setGameState(prev => ({ ...prev, newAchievementUnlocked: null }))}
+      />
+
+      {/* Milestone Notification */}
+      <MilestoneNotification
+        milestone={newMilestoneUnlocked}
+        onClose={() => setNewMilestoneUnlocked(null)}
       />
 
       {/* Toast Notifications */}
