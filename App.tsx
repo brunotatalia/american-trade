@@ -81,6 +81,12 @@ const App: React.FC = () => {
     showWorldNews: false,
     achievements: ACHIEVEMENTS,
     newAchievementUnlocked: null,
+    prestige: INITIAL_PRESTIGE_DATA,
+
+    // Advanced Trading Mechanics
+    marketSentiments: [],
+    upcomingStockSplits: [],
+    bankruptcyHistory: [],
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
@@ -158,7 +164,21 @@ const App: React.FC = () => {
         const hasNews = newsEvents.length > 0;
 
         // Update commodities with historical prices
-        const updatedCommodities = GameLogic.updateMarketPricesHistorical(prev.commodities, newDate, newEra || prev.currentEra!);
+        let updatedCommodities = GameLogic.updateMarketPricesHistorical(prev.commodities, newDate, newEra || prev.currentEra!);
+
+        // Advanced Trading: Generate random market sentiment
+        const newSentiments = [...prev.marketSentiments];
+        for (const commodityId of Object.keys(updatedCommodities)) {
+          const sentiment = GameLogic.generateMarketSentiment(commodityId, updatedCommodities, prev.gameTurn + 1);
+          if (sentiment) {
+            newSentiments.push(sentiment);
+          }
+        }
+
+        // Advanced Trading: Update and apply market sentiments
+        const activeSentiments = GameLogic.updateMarketSentiments(newSentiments);
+        updatedCommodities = GameLogic.applyMarketSentiment(updatedCommodities, activeSentiments);
+
         const income = GameLogic.calculatePlayerIncome(prev.player, prev.properties, prev.skills, updatedCommodities);
 
         let newPlayerState = { ...prev.player, money: prev.player.money + income };
@@ -172,6 +192,51 @@ const App: React.FC = () => {
 
         // Update property values (appreciation)
         newPlayerState = GameLogic.updatePropertyValues(newPlayerState, prev.properties, prev.player.skills);
+
+        // Advanced Trading: Process dividend payments
+        const {
+          player: playerAfterDividends,
+          commodities: commoditiesAfterDividends,
+          logs: dividendLogs
+        } = GameLogic.processDividendPayments(
+          newPlayerState,
+          updatedCommodities,
+          prev.gameTurn + 1
+        );
+        newPlayerState = playerAfterDividends;
+        updatedCommodities = commoditiesAfterDividends;
+        if (dividendLogs.length > 0) {
+          newLogs.push(...dividendLogs);
+        }
+
+        // Advanced Trading: Process stock splits
+        const {
+          player: playerAfterSplits,
+          commodities: commoditiesAfterSplits,
+          logs: splitLogs,
+          updatedSplits
+        } = GameLogic.processStockSplits(
+          newPlayerState,
+          updatedCommodities,
+          prev.upcomingStockSplits,
+          prev.gameTurn + 1
+        );
+        newPlayerState = playerAfterSplits;
+        updatedCommodities = commoditiesAfterSplits;
+        if (splitLogs.length > 0) {
+          newLogs.push(...splitLogs);
+        }
+
+        // Advanced Trading: Check for new stock splits (5% chance per eligible commodity)
+        const newSplits = [...updatedSplits];
+        for (const commodityId of Object.keys(updatedCommodities)) {
+          if (Math.random() < 0.05) {
+            const split = GameLogic.scheduleStockSplit(commodityId, updatedCommodities, prev.gameTurn + 1);
+            if (split) {
+              newSplits.push(split);
+            }
+          }
+        }
 
         // Process pending orders
         const { player: playerAfterOrders, logs: orderLogs } = GameLogic.processPendingOrders(
@@ -208,6 +273,23 @@ const App: React.FC = () => {
           newLogs.push(...liquidationLogs);
         }
 
+        // Advanced Trading: Check for bankruptcies
+        const {
+          player: playerAfterBankruptcy,
+          commodities: commoditiesAfterBankruptcy,
+          logs: bankruptcyLogs,
+          bankruptcyEvents
+        } = GameLogic.processBankruptcyChecks(
+          newPlayerState,
+          updatedCommodities,
+          prev.gameTurn + 1
+        );
+        newPlayerState = playerAfterBankruptcy;
+        updatedCommodities = commoditiesAfterBankruptcy;
+        if (bankruptcyLogs.length > 0) {
+          newLogs.push(...bankruptcyLogs);
+        }
+
         // Update price history for charts
         const updatedPriceHistory = GameLogic.updatePriceHistory(
           prev.priceHistory,
@@ -223,6 +305,7 @@ const App: React.FC = () => {
 
         // Add news events to history
         const updatedNewsHistory = [...prev.worldNewsHistory, ...newsEvents];
+        const updatedBankruptcyHistory = [...prev.bankruptcyHistory, ...bankruptcyEvents];
 
         return {
           ...prev,
@@ -239,6 +322,11 @@ const App: React.FC = () => {
           isLoadingEvent: false,
           worldNewsHistory: updatedNewsHistory,
           showWorldNews: hasNews,
+
+          // Advanced Trading Mechanics state updates
+          marketSentiments: activeSentiments,
+          upcomingStockSplits: newSplits,
+          bankruptcyHistory: updatedBankruptcyHistory,
         };
       });
 

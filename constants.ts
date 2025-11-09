@@ -26,7 +26,12 @@ export const INITIAL_PLAYER_STATISTICS = {
   achievementsUnlocked: 0,
   peakNetWorth: 0,
   turnsPlayed: 0,
-  startDate: new Date()
+  startDate: new Date(),
+
+  // Advanced Trading Statistics
+  totalDividendsEarned: 0,
+  stockSplitsExperienced: 0,
+  bankruptciesExperienced: 0
 };
 
 // Initial prestige data
@@ -167,7 +172,11 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.50,
     description: "Shares in innovative technology companies. High risk, high reward.",
     icon: React.createElement(TrendUpIcon, {className: "text-blue-400"}),
-    category: 'stock' as const
+    category: 'stock' as const,
+    dividendYield: 0.015, // 1.5% annual dividend
+    dividendFrequency: 'quarterly' as const,
+    bankruptcyRisk: 0.02, // 2% annual bankruptcy risk
+    canSplit: true
   },
   TREASURY_BONDS: {
     id: 'TREASURY_BONDS',
@@ -176,7 +185,11 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.05,
     description: "US Government bonds. Very safe, low returns. Generates 4% annual yield.",
     icon: React.createElement(TrendDownIcon, {className: "text-green-600"}),
-    category: 'bond' as const
+    category: 'bond' as const,
+    dividendYield: 0.04, // 4% annual yield
+    dividendFrequency: 'quarterly' as const,
+    bankruptcyRisk: 0.0, // Government bonds don't default
+    canSplit: false
   },
   CORPORATE_BONDS: {
     id: 'CORPORATE_BONDS',
@@ -185,7 +198,11 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.10,
     description: "Bonds issued by corporations. Higher risk than government bonds. Generates 6% annual yield.",
     icon: React.createElement(TrendDownIcon, {className: "text-blue-600"}),
-    category: 'bond' as const
+    category: 'bond' as const,
+    dividendYield: 0.06, // 6% annual yield
+    dividendFrequency: 'quarterly' as const,
+    bankruptcyRisk: 0.005, // 0.5% annual bankruptcy risk
+    canSplit: false
   },
   INDEX_FUND: {
     id: 'INDEX_FUND',
@@ -194,7 +211,11 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.20,
     description: "Diversified portfolio tracking 500 large US companies. Balanced risk/reward.",
     icon: React.createElement(TrendUpIcon, {className: "text-purple-500"}),
-    category: 'stock' as const
+    category: 'stock' as const,
+    dividendYield: 0.025, // 2.5% annual dividend
+    dividendFrequency: 'quarterly' as const,
+    bankruptcyRisk: 0.001, // Very low risk for diversified index
+    canSplit: true
   },
 
   // Currency
@@ -216,7 +237,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.65,
     description: 'Decentralized digital currency. Extremely volatile, influenced by adoption and regulation.',
     icon: React.createElement(TrendUpIcon, {className: "text-orange-400"}),
-    category: 'crypto' as const
+    category: 'crypto' as const,
+    dividendYield: 0.0, // No dividends for crypto
+    bankruptcyRisk: 0.01, // 1% risk of catastrophic crash
+    canSplit: false
   },
   ETHEREUM: {
     id: 'ETHEREUM',
@@ -225,7 +249,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     volatility: 0.70,
     description: 'Smart contract platform and cryptocurrency. High volatility with strong tech fundamentals.',
     icon: React.createElement(TrendUpIcon, {className: "text-purple-400"}),
-    category: 'crypto' as const
+    category: 'crypto' as const,
+    dividendYield: 0.0, // No dividends for crypto
+    bankruptcyRisk: 0.015, // 1.5% risk (slightly higher than Bitcoin)
+    canSplit: false
   }
 };
 

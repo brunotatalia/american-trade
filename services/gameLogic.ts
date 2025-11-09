@@ -1020,3 +1020,321 @@ export const processLiquidations = (
   newPlayerState.leveragedPositions = activePositions;
   return { player: newPlayerState, logs };
 };
+
+// ========================================
+// Advanced Trading Mechanics
+// ========================================
+
+/**
+ * Generate random market sentiment for a commodity
+ * Sentiments influence price movements beyond normal volatility
+ */
+export const generateMarketSentiment = (
+  commodityId: string,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): import('../types').MarketSentiment | null => {
+  const commodity = commodities[commodityId];
+  if (!commodity) return null;
+
+  // 5% chance per turn to generate sentiment for any commodity
+  if (Math.random() > 0.05) return null;
+
+  const sentimentTypes = [
+    { level: 0.8, impact: 0.15, source: 'analyst' as const, desc: 'Strong analyst upgrade' },
+    { level: 0.5, impact: 0.08, source: 'news' as const, desc: 'Positive industry news' },
+    { level: 0.3, impact: 0.05, source: 'technical' as const, desc: 'Bullish technical pattern' },
+    { level: -0.3, impact: 0.05, source: 'technical' as const, desc: 'Bearish technical pattern' },
+    { level: -0.5, impact: 0.08, source: 'news' as const, desc: 'Negative industry news' },
+    { level: -0.8, impact: 0.15, source: 'analyst' as const, desc: 'Strong analyst downgrade' },
+    { level: 0.6, impact: 0.20, source: 'social' as const, desc: 'Viral social media hype' },
+    { level: 0.7, impact: 0.12, source: 'fundamental' as const, desc: 'Strong earnings report' },
+    { level: -0.7, impact: 0.12, source: 'fundamental' as const, desc: 'Weak earnings report' }
+  ];
+
+  const sentimentType = sentimentTypes[Math.floor(Math.random() * sentimentTypes.length)];
+  const duration = Math.floor(Math.random() * 5) + 3; // 3-7 turns
+
+  return {
+    id: `sentiment-${commodityId}-${currentTurn}`,
+    commodityId,
+    sentimentLevel: sentimentType.level,
+    impact: sentimentType.impact,
+    duration,
+    source: sentimentType.source,
+    description: sentimentType.desc,
+    createdAtTurn: currentTurn
+  };
+};
+
+/**
+ * Update active market sentiments (decay duration, remove expired)
+ */
+export const updateMarketSentiments = (
+  sentiments: import('../types').MarketSentiment[]
+): import('../types').MarketSentiment[] => {
+  return sentiments
+    .map(s => ({ ...s, duration: s.duration - 1 }))
+    .filter(s => s.duration > 0);
+};
+
+/**
+ * Apply market sentiment to price changes
+ * Modifies the updated commodities based on active sentiments
+ */
+export const applyMarketSentiment = (
+  commodities: Record<string, Commodity>,
+  sentiments: import('../types').MarketSentiment[]
+): Record<string, Commodity> => {
+  const updatedCommodities = { ...commodities };
+
+  for (const sentiment of sentiments) {
+    const commodity = updatedCommodities[sentiment.commodityId];
+    if (!commodity) continue;
+
+    // Apply sentiment impact to price
+    const priceChange = commodity.price * sentiment.impact * (sentiment.sentimentLevel > 0 ? 1 : -1);
+    const newPrice = Math.max(0.01, commodity.price + priceChange);
+
+    updatedCommodities[sentiment.commodityId] = {
+      ...commodity,
+      price: parseFloat(newPrice.toFixed(2))
+    };
+  }
+
+  return updatedCommodities;
+};
+
+/**
+ * Process dividend payments for eligible holdings
+ * Dividends are paid quarterly or annually based on commodity configuration
+ */
+export const processDividendPayments = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  let totalDividends = 0;
+
+  for (const commodityId in player.commodities) {
+    const holding = player.commodities[commodityId];
+    const commodity = commodities[commodityId];
+
+    if (!commodity || !commodity.dividendYield || commodity.dividendYield === 0) continue;
+
+    // Determine if dividend should be paid this turn
+    const frequency = commodity.dividendFrequency || 'annual';
+    const turnsPerPayment = frequency === 'quarterly' ? Math.floor(TURNS_PER_YEAR / 4) : TURNS_PER_YEAR;
+
+    const lastDividend = commodity.lastDividendTurn || 0;
+    const turnsSinceLastDividend = currentTurn - lastDividend;
+
+    if (turnsSinceLastDividend >= turnsPerPayment) {
+      // Calculate dividend payment
+      const holdingValue = holding.quantity * commodity.price;
+      const annualDividend = holdingValue * commodity.dividendYield;
+      const paymentDividend = frequency === 'quarterly' ? annualDividend / 4 : annualDividend;
+
+      totalDividends += paymentDividend;
+      newPlayerState.money += paymentDividend;
+
+      logs.push(createLog(
+        `💰 Dividend from ${commodity.name}: +$${paymentDividend.toFixed(2)} (${(commodity.dividendYield * 100).toFixed(2)}% yield)`,
+        'success'
+      ));
+
+      // Update last dividend turn in commodity
+      updatedCommodities[commodityId] = {
+        ...commodity,
+        lastDividendTurn: currentTurn
+      };
+    }
+  }
+
+  if (totalDividends > 0) {
+    newPlayerState.statistics = {
+      ...newPlayerState.statistics,
+      totalDividendsEarned: newPlayerState.statistics.totalDividendsEarned + totalDividends
+    };
+  }
+
+  return { player: newPlayerState, commodities: updatedCommodities, logs };
+};
+
+/**
+ * Schedule a stock split for a commodity
+ * Splits are announced in advance and executed later
+ */
+export const scheduleStockSplit = (
+  commodityId: string,
+  commodities: Record<string, Commodity>,
+  currentTurn: number,
+  announcementDelay: number = 5
+): import('../types').StockSplit | null => {
+  const commodity = commodities[commodityId];
+  if (!commodity || !commodity.canSplit) return null;
+
+  // Only split if price is high enough (above $300)
+  if (commodity.price < 300) return null;
+
+  // Common split ratios
+  const splitRatios = [2, 3]; // 2:1 or 3:1
+  const ratio = splitRatios[Math.floor(Math.random() * splitRatios.length)];
+
+  return {
+    id: `split-${commodityId}-${currentTurn}`,
+    commodityId,
+    ratio,
+    scheduledTurn: currentTurn + announcementDelay,
+    announced: false,
+    executed: false
+  };
+};
+
+/**
+ * Process scheduled stock splits
+ * Adjusts player holdings and commodity prices
+ */
+export const processStockSplits = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  splits: import('../types').StockSplit[],
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[]; updatedSplits: import('../types').StockSplit[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  const updatedSplits = splits.map(split => {
+    if (split.executed) return split;
+
+    // Announce upcoming splits
+    if (!split.announced && currentTurn === split.scheduledTurn - 3) {
+      logs.push(createLog(
+        `📢 ${updatedCommodities[split.commodityId]?.name} announces ${split.ratio}:1 stock split in 3 turns!`,
+        'info'
+      ));
+      return { ...split, announced: true };
+    }
+
+    // Execute split
+    if (currentTurn === split.scheduledTurn) {
+      const commodity = updatedCommodities[split.commodityId];
+      if (!commodity) return { ...split, executed: true };
+
+      // Adjust player holdings
+      if (newPlayerState.commodities[split.commodityId]) {
+        const holding = newPlayerState.commodities[split.commodityId];
+        newPlayerState.commodities[split.commodityId] = {
+          ...holding,
+          quantity: holding.quantity * split.ratio,
+          avgBuyPrice: holding.avgBuyPrice / split.ratio
+        };
+
+        logs.push(createLog(
+          `🔄 ${commodity.name} ${split.ratio}:1 split executed! Holdings: ${holding.quantity} → ${holding.quantity * split.ratio}`,
+          'success'
+        ));
+
+        // Update statistics
+        newPlayerState.statistics = {
+          ...newPlayerState.statistics,
+          stockSplitsExperienced: newPlayerState.statistics.stockSplitsExperienced + 1
+        };
+      }
+
+      // Adjust commodity price
+      updatedCommodities[split.commodityId] = {
+        ...commodity,
+        price: parseFloat((commodity.price / split.ratio).toFixed(2))
+      };
+
+      return { ...split, executed: true };
+    }
+
+    return split;
+  });
+
+  // Remove executed splits
+  const activeSplits = updatedSplits.filter(s => !s.executed);
+
+  return {
+    player: newPlayerState,
+    commodities: updatedCommodities,
+    logs,
+    updatedSplits: activeSplits
+  };
+};
+
+/**
+ * Check for bankruptcy events
+ * Commodities with bankruptcy risk may crash to near-zero
+ */
+export const processBankruptcyChecks = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[]; bankruptcyEvents: import('../types').BankruptcyEvent[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  const bankruptcyEvents: import('../types').BankruptcyEvent[] = [];
+
+  for (const commodityId in commodities) {
+    const commodity = commodities[commodityId];
+    if (!commodity.bankruptcyRisk || commodity.bankruptcyRisk === 0) continue;
+
+    // Check bankruptcy probability (annual risk converted to per-turn)
+    const turnRisk = commodity.bankruptcyRisk / TURNS_PER_YEAR;
+    const bankrupt = Math.random() < turnRisk;
+
+    if (bankrupt) {
+      const holding = player.commodities[commodityId];
+      const playerLosses = holding ? holding.quantity * commodity.price : 0;
+
+      // Crash the price to near-zero
+      updatedCommodities[commodityId] = {
+        ...commodity,
+        price: 0.01,
+        volatility: 0.01 // Lock volatility low
+      };
+
+      logs.push(createLog(
+        `💥 BANKRUPTCY: ${commodity.name} has collapsed! Price crashed to $0.01`,
+        'error'
+      ));
+
+      if (playerLosses > 0) {
+        logs.push(createLog(
+          `📉 You lost $${playerLosses.toFixed(2)} in ${commodity.name} holdings`,
+          'error'
+        ));
+
+        // Update player holdings to reflect crashed value
+        newPlayerState.statistics = {
+          ...newPlayerState.statistics,
+          bankruptciesExperienced: newPlayerState.statistics.bankruptciesExperienced + 1,
+          totalLoss: newPlayerState.statistics.totalLoss + playerLosses
+        };
+      }
+
+      bankruptcyEvents.push({
+        id: `bankruptcy-${commodityId}-${currentTurn}`,
+        commodityId,
+        triggerTurn: currentTurn,
+        warningTurns: 0, // Could add warning system in future
+        finalPrice: commodity.price,
+        playerLosses
+      });
+    }
+  }
+
+  return {
+    player: newPlayerState,
+    commodities: updatedCommodities,
+    logs,
+    bankruptcyEvents
+  };
+};

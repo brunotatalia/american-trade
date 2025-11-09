@@ -73,6 +73,37 @@ export interface PriceHistory {
   volume?: number;
 }
 
+// Advanced Trading Mechanics Interfaces
+
+export interface MarketSentiment {
+  id: string;
+  commodityId: string;
+  sentimentLevel: number; // -1.0 to 1.0 (bearish to bullish)
+  impact: number; // 0.05 to 0.30 (5-30% price impact)
+  duration: number; // turns until sentiment expires
+  source: 'news' | 'analyst' | 'technical' | 'fundamental' | 'social';
+  description: string; // Why this sentiment exists
+  createdAtTurn: number;
+}
+
+export interface StockSplit {
+  id: string;
+  commodityId: string;
+  ratio: number; // Split ratio (e.g., 2 for 2:1 split, 3 for 3:1)
+  scheduledTurn: number; // When the split will occur
+  announced: boolean; // Whether players have been notified
+  executed: boolean; // Whether the split has been processed
+}
+
+export interface BankruptcyEvent {
+  id: string;
+  commodityId: string;
+  triggerTurn: number; // When bankruptcy occurred
+  warningTurns: number; // Turns of warning before bankruptcy
+  finalPrice: number; // Price before crash
+  playerLosses: number; // Total player holdings lost
+}
+
 export interface Player {
   money: number;
   reputation: number;
@@ -100,6 +131,13 @@ export interface Commodity {
   description: string;
   icon?: React.ReactNode;
   category?: 'agricultural' | 'energy' | 'precious_metal' | 'stock' | 'bond' | 'currency' | 'crypto'; // For fee calculation
+
+  // Advanced Trading Mechanics
+  dividendYield?: number; // Annual yield percentage (e.g., 0.03 = 3%)
+  dividendFrequency?: 'quarterly' | 'annual'; // How often dividends are paid
+  lastDividendTurn?: number; // Last turn dividend was paid
+  bankruptcyRisk?: number; // 0-1 probability of bankruptcy per year
+  canSplit?: boolean; // Whether this commodity can undergo stock splits
 }
 
 export interface Property {
@@ -190,6 +228,11 @@ export interface PlayerStatistics {
   peakNetWorth: number;
   turnsPlayed: number;
   startDate: Date;
+
+  // Advanced Trading Statistics
+  totalDividendsEarned: number;
+  stockSplitsExperienced: number;
+  bankruptciesExperienced: number;
 }
 
 export interface Era {
@@ -232,6 +275,11 @@ export interface GameState {
   achievements: Achievement[]; // All available achievements
   newAchievementUnlocked: Achievement | null; // For showing notification
   prestige: PrestigeData; // Prestige system data (persists across runs)
+
+  // Advanced Trading Mechanics
+  marketSentiments: MarketSentiment[]; // Active market sentiments
+  upcomingStockSplits: StockSplit[]; // Scheduled and pending stock splits
+  bankruptcyHistory: BankruptcyEvent[]; // Historical bankruptcies
 }
 
 export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE' | 'MILESTONES';
