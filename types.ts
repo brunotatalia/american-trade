@@ -280,9 +280,15 @@ export interface GameState {
   marketSentiments: MarketSentiment[]; // Active market sentiments
   upcomingStockSplits: StockSplit[]; // Scheduled and pending stock splits
   bankruptcyHistory: BankruptcyEvent[]; // Historical bankruptcies
+
+  // Win Conditions
+  winConditions: WinCondition[]; // All available win conditions
+  winConditionProgress: WinConditionProgress[]; // Player progress on win conditions
+  gameWon: boolean; // Whether player has achieved a win condition
+  winningCondition: WinCondition | null; // The win condition that was achieved
 }
 
-export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE' | 'MILESTONES';
+export type ActiveView = 'MARKET' | 'REAL_ESTATE' | 'SKILLS' | 'JOBS' | 'TRADING' | 'CASINO' | 'NEWS' | 'ACHIEVEMENTS' | 'STATISTICS' | 'DAILY_CHALLENGES' | 'PRESTIGE' | 'MILESTONES' | 'WIN_CONDITIONS';
 
 // Prestige / New Game+ System
 export interface PrestigeBonus {
@@ -355,4 +361,29 @@ export interface ProgressionData {
     eras: string[];
   };
   milestonesToShow: string[]; // Next milestones to display
+}
+
+// Win Conditions System
+export interface WinCondition {
+  id: string;
+  name: string;
+  description: string;
+  category: 'wealth' | 'property' | 'trading' | 'speed' | 'diversification' | 'era' | 'special';
+  difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
+  requirement: (gameState: GameState) => boolean;
+  progress: (gameState: GameState) => { current: number; target: number; unit: string };
+  icon: string;
+  reward?: {
+    prestigePoints?: number;
+    title?: string;
+    unlocks?: string[];
+  };
+}
+
+export interface WinConditionProgress {
+  conditionId: string;
+  completed: boolean;
+  completedAtTurn?: number;
+  completedDate?: GameDate;
+  timeToComplete?: number; // turns taken
 }

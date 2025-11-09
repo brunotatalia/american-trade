@@ -16,6 +16,7 @@ import { ACHIEVEMENTS } from './data/achievements';
 import { generateDailyChallenge } from './data/dailyChallenges';
 import { PRESTIGE_BONUSES, calculatePrestigePoints } from './data/prestigeBonuses';
 import { checkNewMilestones, getReputationTier } from './data/progression';
+import { WIN_CONDITIONS, checkWinConditions } from './data/winConditions';
 import { EraSelector } from './components/EraSelector';
 import { Dashboard } from './components/Dashboard';
 import { MarketView } from './components/MarketView';
@@ -30,6 +31,8 @@ import { DailyChallengesView } from './components/DailyChallengesView';
 import { PrestigeView } from './components/PrestigeView';
 import { MilestonesView } from './components/MilestonesView';
 import { MilestoneNotification } from './components/MilestoneNotification';
+import { WinConditionsView } from './components/WinConditionsView';
+import { VictoryModal } from './components/VictoryModal';
 import { MiniGameModal } from './components/MiniGameModal';
 import { EventPopup } from './components/EventPopup';
 import { AchievementNotification } from './components/AchievementNotification';
@@ -87,6 +90,12 @@ const App: React.FC = () => {
     marketSentiments: [],
     upcomingStockSplits: [],
     bankruptcyHistory: [],
+
+    // Win Conditions
+    winConditions: WIN_CONDITIONS,
+    winConditionProgress: [],
+    gameWon: false,
+    winningCondition: null,
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
@@ -442,6 +451,49 @@ const App: React.FC = () => {
     }
   }, [gameState.gameTurn, gameState.player.money, gameState.player.reputation, gameState.player.properties, gameState.player.skills, addLogEntry]);
 
+  // Win Condition Checking Effect - runs when game state changes
+  useEffect(() => {
+    if (!gameState.gameStarted || gameState.gameWon) return;
+
+    // Check for win conditions
+    const wonCondition = checkWinConditions(gameState);
+
+    if (wonCondition) {
+      // Mark win condition as completed
+      setGameState(prev => {
+        const existingProgress = prev.winConditionProgress.find(p => p.conditionId === wonCondition.id);
+        if (existingProgress?.completed) return prev; // Already completed
+
+        const newProgress = {
+          conditionId: wonCondition.id,
+          completed: true,
+          completedAtTurn: prev.gameTurn,
+          completedDate: prev.currentDate,
+          timeToComplete: prev.gameTurn
+        };
+
+        // Award prestige points if this is the first win
+        let updatedPrestige = prev.prestige;
+        if (!prev.gameWon && wonCondition.reward?.prestigePoints) {
+          updatedPrestige = {
+            ...prev.prestige,
+            totalPrestigePoints: prev.prestige.totalPrestigePoints + wonCondition.reward.prestigePoints,
+            availablePrestigePoints: prev.prestige.availablePrestigePoints + wonCondition.reward.prestigePoints
+          };
+        }
+
+        return {
+          ...prev,
+          winConditionProgress: [...prev.winConditionProgress.filter(p => p.conditionId !== wonCondition.id), newProgress],
+          gameWon: true,
+          winningCondition: wonCondition,
+          prestige: updatedPrestige
+        };
+      });
+
+      addLogEntry(`🎉 VICTORY! You've achieved: ${wonCondition.name}!`, 'success');
+    }
+  }, [gameState.gameTurn, gameState.player.money, gameState.player.reputation, gameState.player.properties, gameState.player.skills, gameState.player.statistics, gameState.player.achievements, gameState.gameStarted, gameState.gameWon, addLogEntry]);
 
   const handleBuyCommodity = useCallback((commodityId: string, quantity: number) => {
     const commodity = gameState.commodities[commodityId];
@@ -736,6 +788,22 @@ const App: React.FC = () => {
     addLogEntry(`Prestiged to level ${updatedPrestigeData.prestigeLevel}! Starting fresh with ${earnedPoints} new prestige points.`, 'success');
   }, [gameState, addLogEntry]);
 
+  // Victory Modal handlers
+  const handleContinuePlaying = useCallback(() => {
+    // Clear the game won state but keep the win condition progress
+    setGameState(prev => ({
+      ...prev,
+      gameWon: false,
+      winningCondition: null
+    }));
+    addLogEntry('Continuing to pursue additional victories!', 'success');
+  }, [addLogEntry]);
+
+  const handleVictoryPrestige = useCallback(() => {
+    // Same as handlePrestige but designed for post-victory
+    handlePrestige();
+  }, [handlePrestige]);
+
   const handleUpgradeBonus = useCallback((bonusId: string) => {
     const bonus = PRESTIGE_BONUSES.find(b => b.id === bonusId);
     if (!bonus) return;
@@ -920,6 +988,8 @@ const App: React.FC = () => {
         />;
       case 'MILESTONES':
         return <MilestonesView gameState={gameState} />;
+      case 'WIN_CONDITIONS':
+        return <WinConditionsView gameState={gameState} />;
       default:
         return <MarketView
                     gameState={gameState}
@@ -991,6 +1061,7 @@ const App: React.FC = () => {
             <div className="mt-auto pt-2 border-t border-gray-700 space-y-1.5">
                  <NavButton view="DAILY_CHALLENGES" label="Challenges" icon={<DailyChallengesIcon/>}/>
                  <NavButton view="MILESTONES" label="Milestones" icon={<MilestonesIcon/>}/>
+                 <NavButton view="WIN_CONDITIONS" label="Win Conditions" icon={<span>🏆</span>}/>
                  <NavButton view="PRESTIGE" label="Prestige" icon={<PrestigeIcon/>}/>
                  <NavButton view="ACHIEVEMENTS" label="Achievements" icon={<AchievementsIcon/>}/>
                  <NavButton view="STATISTICS" label="Statistics" icon={<StatisticsIcon/>}/>
@@ -1049,6 +1120,17 @@ const App: React.FC = () => {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+
+      {/* Victory Modal */}
+      {gameState.gameWon && gameState.winningCondition && (
+        <VictoryModal
+          winCondition={gameState.winningCondition}
+          completedAtTurn={gameState.winConditionProgress.find(p => p.conditionId === gameState.winningCondition?.id)?.completedAtTurn || gameState.gameTurn}
+          completedDate={gameState.winConditionProgress.find(p => p.conditionId === gameState.winningCondition?.id)?.completedDate || gameState.currentDate}
+          onContinuePlaying={handleContinuePlaying}
+          onPrestige={handleVictoryPrestige}
+        />
+      )}
 
       {/* Tutorial System */}
       <Tutorial
