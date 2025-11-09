@@ -1811,7 +1811,790 @@ export const GAME_EVENTS: GameEvent[] = [
         }
       }
     ]
+  },
+
+  // === EXPANSION: Business & Investment Events ===
+  {
+    id: 'STARTUP_INVESTMENT',
+    title: '🚀 Startup Investment Opportunity',
+    description: 'A friend is launching a tech startup and needs seed funding. High risk, high reward.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Invest $10,000',
+        action: (gs: GameState) => {
+          if (gs.player.money < 10000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const success = Math.random() > 0.4; // 60% success rate
+          if (success) {
+            return {
+              player: { ...gs.player, money: gs.player.money + 30000, reputation: gs.player.reputation + 30 },
+              gameLog: [...gs.gameLog, createLog('Startup succeeded! Made $40,000 profit! +30 reputation', 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 10000 },
+              gameLog: [...gs.gameLog, createLog('Startup failed. Lost $10,000.', 'warning')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Decline',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Passed on the startup opportunity.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'FRANCHISE_OFFER',
+    title: '🍔 Franchise Opportunity',
+    description: 'A national franchise is offering you exclusive rights to open a location in your area.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Buy franchise ($25,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 25000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 25000, reputation: gs.player.reputation + 20 },
+            gameLog: [...gs.gameLog, createLog('Franchise purchased! Generates passive income. +20 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Pass',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Decided against the franchise.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'ANGEL_INVESTOR',
+    title: '👼 Angel Investor Network',
+    description: 'You\'ve been invited to join an exclusive angel investor network.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Join ($50,000 buy-in)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 50000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 50000, reputation: gs.player.reputation + 50 },
+            gameLog: [...gs.gameLog, createLog('Joined angel network! Opens elite investment opportunities. +50 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Decline',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Not ready for angel investing yet.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Career & Education Events ===
+  {
+    id: 'MBA_PROGRAM',
+    title: '🎓 MBA Program Acceptance',
+    description: 'You\'ve been accepted to a prestigious MBA program. It\'s expensive but could boost your career.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Enroll ($15,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 15000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 15000, reputation: gs.player.reputation + 40 },
+            gameLog: [...gs.gameLog, createLog('MBA completed! Career prospects improved. +40 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Self-study instead',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation + 10 },
+          gameLog: [...gs.gameLog, createLog('Improved skills through self-study. +10 reputation', 'success')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'EXECUTIVE_HEADHUNTER',
+    title: '💼 Executive Headhunter',
+    description: 'A headhunter contacted you about a high-paying executive position.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Take the position',
+        action: (gs: GameState) => {
+          const salary = Math.floor(Math.random() * 30000) + 20000;
+          return {
+            player: { ...gs.player, money: gs.player.money + salary, reputation: gs.player.reputation + 35 },
+            gameLog: [...gs.gameLog, createLog(`New executive role! +$${salary} signing bonus. +35 reputation`, 'success')]
+          };
+        }
+      },
+      {
+        text: 'Stay in current role',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation + 5 },
+          gameLog: [...gs.gameLog, createLog('Loyalty recognized. +5 reputation', 'success')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'INDUSTRY_CONFERENCE',
+    title: '📊 Industry Conference',
+    description: 'Attend a major industry conference to network and learn new skills.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Attend ($2,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 2000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 2000, reputation: gs.player.reputation + 15 },
+            gameLog: [...gs.gameLog, createLog('Conference was valuable! Made great connections. +15 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Skip it',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Decided to skip the conference.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Market & Economic Events ===
+  {
+    id: 'INTEREST_RATE_HIKE',
+    title: '📈 Federal Reserve Rate Hike',
+    description: 'The Fed raised interest rates. Markets are volatile.',
+    type: 'neutral',
+    choices: [
+      {
+        text: 'Buy the dip',
+        action: (gs: GameState) => {
+          if (gs.player.money < 5000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const success = Math.random() > 0.5;
+          if (success) {
+            return {
+              player: { ...gs.player, money: gs.player.money + 3000 },
+              gameLog: [...gs.gameLog, createLog('Market recovered! Made $3,000', 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 5000 },
+              gameLog: [...gs.gameLog, createLog('Market dropped further. Lost $5,000', 'warning')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Hold cash',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation + 5 },
+          gameLog: [...gs.gameLog, createLog('Waited for clarity. +5 reputation for patience', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'COMMODITY_SHORTAGE',
+    title: '⛽ Commodity Shortage',
+    description: 'A major commodity shortage is driving prices sky-high!',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Stockpile commodities',
+        action: (gs: GameState) => {
+          if (gs.player.money < 8000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 8000 },
+            gameLog: [...gs.gameLog, createLog('Bought commodities. Prices will rise!', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Avoid speculation',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Decided not to speculate on commodities.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'CURRENCY_DEVALUATION',
+    title: '💱 Currency Crisis',
+    description: 'Foreign currency devaluation creates arbitrage opportunities.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Currency trade ($10,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 10000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const profit = Math.floor(Math.random() * 8000) + 2000;
+          return {
+            player: { ...gs.player, money: gs.player.money - 10000 + profit },
+            gameLog: [...gs.gameLog, createLog(`Currency trade profit: $${profit - 10000}!`, 'success')]
+          };
+        }
+      },
+      {
+        text: 'Too risky',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Avoided currency speculation.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Personal & Life Events ===
+  {
+    id: 'FAMILY_BUSINESS',
+    title: '👨‍👩‍👧 Family Business Opportunity',
+    description: 'Your family wants you to join their established business.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Join family business',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money + 15000, reputation: gs.player.reputation + 20 },
+            gameLog: [...gs.gameLog, createLog('Joined family business! +$15,000 and +20 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Stay independent',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation + 10 },
+          gameLog: [...gs.gameLog, createLog('Pursued independent path. +10 reputation', 'success')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'INHERITANCE_UNCLE',
+    title: '💰 Distant Uncle\'s Will',
+    description: 'A distant uncle left you a modest inheritance.',
+    type: 'positive',
+    choices: [
+      {
+        text: 'Accept inheritance',
+        action: (gs: GameState) => {
+          const amount = Math.floor(Math.random() * 15000) + 5000;
+          return {
+            player: { ...gs.player, money: gs.player.money + amount },
+            gameLog: [...gs.gameLog, createLog(`Inherited $${amount}!`, 'success')]
+          };
+        }
+      }
+    ]
+  },
+  {
+    id: 'WEDDING_EXPENSES',
+    title: '💒 Wedding Invitation',
+    description: 'You\'ve been invited to an important wedding. Gifts and travel are expensive.',
+    type: 'neutral',
+    choices: [
+      {
+        text: 'Attend ($1,500)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 1500) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 1500, reputation: gs.player.reputation + 15 },
+            gameLog: [...gs.gameLog, createLog('Great networking at wedding! +15 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Send regrets',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation - 5 },
+          gameLog: [...gs.gameLog, createLog('Missed networking opportunity. -5 reputation', 'warning')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Technology & Innovation Events ===
+  {
+    id: 'TECH_IPO',
+    title: '📱 Tech Company IPO',
+    description: 'A promising tech company is going public. Get in early?',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Buy IPO shares ($20,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 20000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const success = Math.random() > 0.3; // 70% success
+          if (success) {
+            const gain = Math.floor(Math.random() * 40000) + 20000;
+            return {
+              player: { ...gs.player, money: gs.player.money + gain },
+              gameLog: [...gs.gameLog, createLog(`IPO soared! Gained $${gain}!`, 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 20000 },
+              gameLog: [...gs.gameLog, createLog('IPO flopped. Lost $20,000', 'error')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Wait and see',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Decided to wait on IPO.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'CRYPTOCURRENCY_HYPE',
+    title: '₿ Cryptocurrency Buzz',
+    description: 'Everyone\'s talking about a new cryptocurrency. FOMO is real.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Invest $5,000',
+        action: (gs: GameState) => {
+          if (gs.player.money < 5000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const outcome = Math.random();
+          if (outcome > 0.7) { // 30% moonshot
+            return {
+              player: { ...gs.player, money: gs.player.money + 45000 },
+              gameLog: [...gs.gameLog, createLog('Crypto mooned! +$50,000!', 'success')]
+            };
+          } else if (outcome > 0.4) { // 30% small gain
+            return {
+              player: { ...gs.player, money: gs.player.money + 2000 },
+              gameLog: [...gs.gameLog, createLog('Crypto gained 40%. +$2,000', 'success')]
+            };
+          } else { // 40% loss
+            return {
+              player: { ...gs.player, money: gs.player.money - 5000 },
+              gameLog: [...gs.gameLog, createLog('Crypto crashed. Lost $5,000', 'error')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Too volatile',
+        action: (gs: GameState) => ({
+          player: { ...gs.player, reputation: gs.player.reputation + 5 },
+          gameLog: [...gs.gameLog, createLog('Avoided risky crypto speculation. +5 reputation', 'success')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'AI_STARTUP',
+    title: '🤖 AI Revolution',
+    description: 'An AI startup wants early investors. This could be huge.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Invest $30,000',
+        action: (gs: GameState) => {
+          if (gs.player.money < 30000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const success = Math.random() > 0.5;
+          if (success) {
+            return {
+              player: { ...gs.player, money: gs.player.money + 100000, reputation: gs.player.reputation + 50 },
+              gameLog: [...gs.gameLog, createLog('AI startup acquired! Made $130,000! +50 reputation', 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 30000 },
+              gameLog: [...gs.gameLog, createLog('AI startup failed. Lost $30,000', 'warning')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Pass',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Passed on AI investment.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Real Estate Events ===
+  {
+    id: 'FORECLOSURE_AUCTION',
+    title: '🏚️ Foreclosure Auction',
+    description: 'A foreclosed property is up for auction. Could be a steal!',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Bid $30,000',
+        action: (gs: GameState) => {
+          if (gs.player.money < 30000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const won = Math.random() > 0.5;
+          if (won) {
+            return {
+              player: { ...gs.player, money: gs.player.money - 30000, reputation: gs.player.reputation + 20 },
+              gameLog: [...gs.gameLog, createLog('Won auction! Property worth $50,000. +20 reputation', 'success')]
+            };
+          } else {
+            return {
+              gameLog: [...gs.gameLog, createLog('Outbid at auction.', 'info')]
+            };
+          }
+        }
+      },
+      {
+        text: 'Skip auction',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Decided not to bid.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'COMMERCIAL_LEASE',
+    title: '🏢 Commercial Tenant Wanted',
+    description: 'A major corporation wants to lease your commercial property long-term.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Accept 10-year lease',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money + 50000, reputation: gs.player.reputation + 25 },
+            gameLog: [...gs.gameLog, createLog('Long-term lease signed! +$50,000 upfront. +25 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Short-term only',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money + 10000 },
+            gameLog: [...gs.gameLog, createLog('1-year lease signed. +$10,000', 'success')]
+          };
+        }
+      }
+    ]
+  },
+  {
+    id: 'PROPERTY_FLIP',
+    title: '🔨 Property Flip Opportunity',
+    description: 'A fixer-upper is available cheap. Renovate and sell for profit?',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Buy and renovate ($40,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 40000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const profit = Math.floor(Math.random() * 30000) + 10000;
+          return {
+            player: { ...gs.player, money: gs.player.money - 40000 + profit, reputation: gs.player.reputation + 15 },
+            gameLog: [...gs.gameLog, createLog(`Property flipped! Profit: $${profit - 40000}. +15 reputation`, 'success')]
+          };
+        }
+      },
+      {
+        text: 'Too much work',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Passed on the flip.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Social & Reputation Events ===
+  {
+    id: 'CHARITY_GALA',
+    title: '🎭 Charity Gala Invitation',
+    description: 'You\'ve been invited to an exclusive charity gala. All the elites will be there.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Attend and donate ($10,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 10000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 10000, reputation: gs.player.reputation + 50 },
+            gameLog: [...gs.gameLog, createLog('Charity gala was a success! Major networking. +50 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Skip it',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Missed networking opportunity.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'BUSINESS_AWARD',
+    title: '🏆 Business Excellence Award',
+    description: 'You\'ve been nominated for a prestigious business award!',
+    type: 'positive',
+    choices: [
+      {
+        text: 'Accept award',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money + 5000, reputation: gs.player.reputation + 60 },
+            gameLog: [...gs.gameLog, createLog('Won business award! +$5,000 prize money, +60 reputation', 'success')]
+          };
+        }
+      }
+    ]
+  },
+  {
+    id: 'MENTOR_OPPORTUNITY',
+    title: '👨‍🏫 Mentorship Program',
+    description: 'A famous businessperson has offered to mentor you.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Accept mentorship',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, reputation: gs.player.reputation + 40 },
+            gameLog: [...gs.gameLog, createLog('Gained valuable mentorship! +40 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Decline politely',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Turned down mentorship.', 'info')]
+        })
+      }
+    ]
+  },
+
+  // === EXPANSION: Crisis & Challenge Events ===
+  {
+    id: 'ECONOMIC_RECESSION',
+    title: '📉 Economic Recession',
+    description: 'The economy is entering a recession. How will you respond?',
+    type: 'negative',
+    choices: [
+      {
+        text: 'Cut costs',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money - 5000, reputation: gs.player.reputation + 10 },
+            gameLog: [...gs.gameLog, createLog('Survived recession with minimal losses. +10 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Invest in downturn',
+        action: (gs: GameState) => {
+          if (gs.player.money < 20000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const success = Math.random() > 0.6;
+          if (success) {
+            return {
+              player: { ...gs.player, money: gs.player.money + 20000, reputation: gs.player.reputation + 30 },
+              gameLog: [...gs.gameLog, createLog('Contrarian bet paid off! +$20,000, +30 reputation', 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 20000 },
+              gameLog: [...gs.gameLog, createLog('Investment didn\'t pay off. Lost $20,000', 'error')]
+            };
+          }
+        }
+      }
+    ]
+  },
+  {
+    id: 'COMPETITOR_LAWSUIT',
+    title: '⚖️ Competitor Lawsuit',
+    description: 'A competitor is suing you for unfair business practices.',
+    type: 'negative',
+    choices: [
+      {
+        text: 'Settle ($15,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 15000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 15000 },
+            gameLog: [...gs.gameLog, createLog('Lawsuit settled. Lost $15,000', 'warning')]
+          };
+        }
+      },
+      {
+        text: 'Fight in court',
+        action: (gs: GameState) => {
+          const won = Math.random() > 0.5;
+          if (won) {
+            return {
+              player: { ...gs.player, reputation: gs.player.reputation + 30 },
+              gameLog: [...gs.gameLog, createLog('Won lawsuit! +30 reputation', 'success')]
+            };
+          } else {
+            return {
+              player: { ...gs.player, money: gs.player.money - 30000, reputation: gs.player.reputation - 20 },
+              gameLog: [...gs.gameLog, createLog('Lost lawsuit. -$30,000, -20 reputation', 'error')]
+            };
+          }
+        }
+      }
+    ]
+  },
+  {
+    id: 'PRODUCT_RECALL',
+    title: '🚨 Product Recall',
+    description: 'One of your products has safety issues. Recall it?',
+    type: 'negative',
+    choices: [
+      {
+        text: 'Recall product ($20,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 20000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 20000, reputation: gs.player.reputation + 20 },
+            gameLog: [...gs.gameLog, createLog('Responsible recall preserved reputation. -$20,000 but +20 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Ignore and hope',
+        action: (gs: GameState) => {
+          const caught = Math.random() > 0.7;
+          if (caught) {
+            return {
+              player: { ...gs.player, money: gs.player.money - 50000, reputation: gs.player.reputation - 50 },
+              gameLog: [...gs.gameLog, createLog('Scandal! Massive fines and reputation damage. -$50,000, -50 reputation', 'error')]
+            };
+          } else {
+            return {
+              gameLog: [...gs.gameLog, createLog('Got lucky. No one noticed.', 'info')]
+            };
+          }
+        }
+      }
+    ]
+  },
+
+  // === EXPANSION: Seasonal & Special Events ===
+  {
+    id: 'BLACK_FRIDAY_BOOM',
+    title: '🛍️ Black Friday Sales Boom',
+    description: 'Holiday shopping season is here! Retail investments could pay off.',
+    type: 'opportunity',
+    choices: [
+      {
+        text: 'Invest in retail ($10,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 10000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          const profit = Math.floor(Math.random() * 8000) + 5000;
+          return {
+            player: { ...gs.player, money: gs.player.money + profit - 10000 },
+            gameLog: [...gs.gameLog, createLog(`Holiday sales profit: $${profit - 10000}!`, 'success')]
+          };
+        }
+      },
+      {
+        text: 'Sit this one out',
+        action: (gs: GameState) => ({
+          gameLog: [...gs.gameLog, createLog('Avoided holiday retail.', 'info')]
+        })
+      }
+    ]
+  },
+  {
+    id: 'NEW_YEARS_RESOLUTION',
+    title: '🎊 New Year, New Goals',
+    description: 'New year brings new opportunities and resolutions.',
+    type: 'positive',
+    choices: [
+      {
+        text: 'Set ambitious goals',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, reputation: gs.player.reputation + 20 },
+            gameLog: [...gs.gameLog, createLog('New year motivation! +20 reputation', 'success')]
+          };
+        }
+      }
+    ]
+  },
+  {
+    id: 'SUMMER_VACATION',
+    title: '🏖️ Summer Vacation Offer',
+    description: 'Take a well-deserved vacation or keep grinding?',
+    type: 'neutral',
+    choices: [
+      {
+        text: 'Take vacation ($5,000)',
+        action: (gs: GameState) => {
+          if (gs.player.money < 5000) {
+            return { gameLog: [...gs.gameLog, createLog('Not enough money!', 'error')] };
+          }
+          return {
+            player: { ...gs.player, money: gs.player.money - 5000, reputation: gs.player.reputation + 15 },
+            gameLog: [...gs.gameLog, createLog('Recharged and refreshed! +15 reputation', 'success')]
+          };
+        }
+      },
+      {
+        text: 'Keep working',
+        action: (gs: GameState) => {
+          return {
+            player: { ...gs.player, money: gs.player.money + 3000 },
+            gameLog: [...gs.gameLog, createLog('Extra work paid off! +$3,000', 'success')]
+          };
+        }
+      }
+    ]
   }
 ];
 
-// Total events: 80+ with rich variety, meaningful choices, and engaging gameplay!
+// Total events: 100+ diverse, engaging events with meaningful choices!
