@@ -47,11 +47,16 @@ export const calculatePlayerIncome = (player: Player, properties: Record<string,
 
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
-  // Simple chance to trigger an event
-  if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
+  
+  // 30% chance per turn to trigger an event
+  if (Math.random() > 0.3) {
     return null;
   }
 
+  // Try to get an event from the new dynamic events system
+  // This is imported from eventsData.ts in App.tsx
+  // For now, keep the AI-generated events as fallback
+  
   const playerStatusHint = `Money: ${gameState.player.money}, Reputation: ${gameState.player.reputation}`;
   const { title, description, type } = await generateGameEventDescription(gameState.currentEra.name, playerStatusHint);
   
@@ -155,7 +160,7 @@ export const attemptSellCommodity = (
     commodity: Commodity, 
     quantity: number,
     skills: string[]
-): { player?: Player, log?: LogEntry, success: boolean } => {
+): { player?: Player, log?: LogEntry, success: boolean, profit?: number, isProfitable?: boolean } => {
 
     const currentOwned = player.commodities[commodity.id]?.quantity || 0;
     if (quantity <= 0) {
@@ -174,9 +179,19 @@ export const attemptSellCommodity = (
     const avgBuyPrice = player.commodities[commodity.id].avgBuyPrice;
     const costOfGoodsSold = avgBuyPrice * quantity;
     const profit = totalRevenue - costOfGoodsSold;
+    const isProfitable = profit > 0;
 
     const newPlayerState = { ...player };
     newPlayerState.money += totalRevenue;
+    
+    // Update trading stats
+    newPlayerState.tradingStats = {
+        ...newPlayerState.tradingStats,
+        totalTrades: newPlayerState.tradingStats.totalTrades + 1,
+        profitableTrades: newPlayerState.tradingStats.profitableTrades + (isProfitable ? 1 : 0),
+        totalProfit: newPlayerState.tradingStats.totalProfit + profit
+    };
+    
     newPlayerState.commodities = {
         ...newPlayerState.commodities,
         [commodity.id]: { ...newPlayerState.commodities[commodity.id], quantity: currentOwned - quantity }
@@ -190,7 +205,9 @@ export const attemptSellCommodity = (
     return { 
         player: newPlayerState, 
         log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}`, 'success'),
-        success: true
+        success: true,
+        profit,
+        isProfitable
     };
 };
 

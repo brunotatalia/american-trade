@@ -18,7 +18,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     price: 2, 
     volatility: 0.2, 
     description: "A staple crop. Prices can be affected by weather and global demand.",
-    icon: React.createElement(CommodityIcon, {className: "text-yellow-400"})
+    icon: React.createElement(CommodityIcon, {className: "text-yellow-400"}),
+    category: 'agriculture',
+    dividendYield: 0,
+    bankruptcyRisk: 0
   },
   OIL: { 
     id: 'OIL', 
@@ -26,7 +29,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     price: 50, 
     volatility: 0.4, 
     description: "Black gold. Highly volatile, influenced by geopolitical events and industrial demand.",
-    icon: React.createElement(CommodityIcon, {className: "text-gray-400"})
+    icon: React.createElement(CommodityIcon, {className: "text-gray-400"}),
+    category: 'energy',
+    dividendYield: 0,
+    bankruptcyRisk: 0
   },
   GOLD: { 
     id: 'GOLD', 
@@ -34,7 +40,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     price: 1800, 
     volatility: 0.1, 
     description: "A safe haven asset. Tends to rise in times of uncertainty.",
-    icon: React.createElement(CommodityIcon, {className: "text-yellow-500"})
+    icon: React.createElement(CommodityIcon, {className: "text-yellow-500"}),
+    category: 'precious_metals',
+    dividendYield: 0,
+    bankruptcyRisk: 0
   },
   TECH_STOCKS: {
     id: 'TECH_STOCKS',
@@ -42,7 +51,10 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     price: 100,
     volatility: 0.6,
     description: "Shares in innovative technology companies. High risk, high reward.",
-    icon: React.createElement(TrendUpIcon, {className: "text-blue-400"})
+    icon: React.createElement(TrendUpIcon, {className: "text-blue-400"}),
+    category: 'stocks',
+    dividendYield: 1.5,
+    bankruptcyRisk: 0.02
   },
   BITCOIN: {
     id: 'BITCOIN',
@@ -50,7 +62,43 @@ export const COMMODITIES_DATA: Record<string, Commodity> = {
     price: 30000,
     volatility: 0.7,
     description: 'A decentralized digital currency. Extremely volatile and influenced by adoption rates and regulation.',
-    icon: React.createElement(TrendUpIcon, {className: "text-orange-400"})
+    icon: React.createElement(TrendUpIcon, {className: "text-orange-400"}),
+    category: 'crypto',
+    dividendYield: 0,
+    bankruptcyRisk: 0.01
+  },
+  TREASURY_BONDS: {
+    id: 'TREASURY_BONDS',
+    name: 'Treasury Bonds',
+    price: 1000,
+    volatility: 0.05,
+    description: 'US government bonds. Safe, stable investment with regular interest payments.',
+    icon: React.createElement(MoneyIcon, {className: "text-green-400"}),
+    category: 'bonds',
+    dividendYield: 4.0,
+    bankruptcyRisk: 0
+  },
+  CORPORATE_BONDS: {
+    id: 'CORPORATE_BONDS',
+    name: 'Corporate Bonds',
+    price: 1000,
+    volatility: 0.15,
+    description: 'Corporate debt securities. Higher yield than treasury bonds with moderate risk.',
+    icon: React.createElement(MoneyIcon, {className: "text-blue-300"}),
+    category: 'bonds',
+    dividendYield: 6.0,
+    bankruptcyRisk: 0.005
+  },
+  INDEX_FUND: {
+    id: 'INDEX_FUND',
+    name: 'Index Fund',
+    price: 150,
+    volatility: 0.3,
+    description: 'Diversified fund tracking market indices. Balanced risk and reward.',
+    icon: React.createElement(TrendUpIcon, {className: "text-purple-400"}),
+    category: 'stocks',
+    dividendYield: 2.5,
+    bankruptcyRisk: 0
   }
 };
 
@@ -115,7 +163,7 @@ export const ERAS_DATA: Era[] = [
     description: "A period of economic prosperity and growth in America. Manufacturing is king.",
     startingMoney: 100,
     marketVolatilityModifier: 0.8,
-    availableCommodities: ['CORN', 'OIL'],
+    availableCommodities: ['CORN', 'OIL', 'TREASURY_BONDS'],
     availableProperties: ['SMALL_APT'],
     availableSkills: ['BASIC_NEGOTIATION']
   },
@@ -125,7 +173,7 @@ export const ERAS_DATA: Era[] = [
     description: "The rise of the internet and tech companies. High volatility and opportunity.",
     startingMoney: 50,
     marketVolatilityModifier: 1.5,
-    availableCommodities: ['OIL', 'TECH_STOCKS', 'GOLD'],
+    availableCommodities: ['OIL', 'TECH_STOCKS', 'GOLD', 'CORPORATE_BONDS', 'INDEX_FUND'],
     availableProperties: ['SMALL_APT', 'COMMERCIAL_SPACE'],
     availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS']
   },
@@ -135,8 +183,18 @@ export const ERAS_DATA: Era[] = [
     description: "A complex global economy with rapid technological change and diverse investment opportunities.",
     startingMoney: 75,
     marketVolatilityModifier: 1.2,
-    availableCommodities: ['CORN', 'OIL', 'GOLD', 'TECH_STOCKS', 'BITCOIN'],
+    availableCommodities: ['CORN', 'OIL', 'GOLD', 'TECH_STOCKS', 'BITCOIN', 'TREASURY_BONDS', 'CORPORATE_BONDS', 'INDEX_FUND'],
     availableProperties: ['SMALL_APT', 'COMMERCIAL_SPACE', 'WAREHOUSE'],
     availableSkills: ['BASIC_NEGOTIATION', 'MARKET_ANALYSIS', 'REAL_ESTATE_MGMT']
   }
+];
+
+// Tier progression system
+export const TIER_NAMES = ['Beginner', 'Amateur', 'Professional', 'Expert', 'Master'];
+export const TIER_REQUIREMENTS = [
+  { netWorth: 0, milestones: 0 },      // Beginner (starting tier)
+  { netWorth: 1000, milestones: 3 },   // Amateur
+  { netWorth: 10000, milestones: 8 },  // Professional
+  { netWorth: 100000, milestones: 15 }, // Expert
+  { netWorth: 1000000, milestones: 25 } // Master
 ];
