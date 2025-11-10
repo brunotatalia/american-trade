@@ -26,6 +26,7 @@ import { VictoryModal } from './components/VictoryModal';
 import { Button } from './components/ui/Button';
 import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
 import * as ProgressionService from './services/progressionService';
+import * as TradingMechanics from './services/tradingMechanics';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -101,7 +102,7 @@ const App: React.FC = () => {
     const tick = async () => {
       setGameState(prev => ({ ...prev, isLoadingEvent: true })); // Signal loading for news/event
 
-      const updatedCommodities = GameLogic.updateMarketPrices(gameState.commodities, gameState.currentEra!, gameState.player.skills);
+      let updatedCommodities = GameLogic.updateMarketPrices(gameState.commodities, gameState.currentEra!, gameState.player.skills);
       const income = GameLogic.calculatePlayerIncome(gameState.player, gameState.properties, gameState.skills);
       
       let newPlayerState = { ...gameState.player, money: gameState.player.money + income };
@@ -110,6 +111,25 @@ const App: React.FC = () => {
       if (income > 0) {
         newLogs.push(GameLogic.createLog(`Earned $${income.toFixed(2)} from investments.`, 'success'));
       }
+
+      // Process advanced trading mechanics (market sentiment, dividends, splits, bankruptcies)
+      const {
+        gameState: tradingUpdates,
+        logs: tradingLogs
+      } = TradingMechanics.processAdvancedTradingMechanics({
+        ...gameState,
+        player: newPlayerState,
+        commodities: updatedCommodities,
+        gameTurn: gameState.gameTurn + 1
+      });
+      
+      if (tradingUpdates.commodities) {
+        updatedCommodities = tradingUpdates.commodities;
+      }
+      if (tradingUpdates.player) {
+        newPlayerState = tradingUpdates.player;
+      }
+      newLogs.push(...tradingLogs);
       
       // Process pending orders
       const { player: playerAfterOrders, logs: orderLogs } = GameLogic.processPendingOrders(
@@ -123,7 +143,13 @@ const App: React.FC = () => {
       }
 
       // Create temporary game state for progression checks
-      let tempGameState = {...gameState, player: newPlayerState, commodities: updatedCommodities, gameTurn: gameState.gameTurn + 1};
+      let tempGameState = {
+        ...gameState,
+        player: newPlayerState,
+        commodities: updatedCommodities,
+        gameTurn: gameState.gameTurn + 1,
+        marketSentiments: tradingUpdates.marketSentiments || gameState.marketSentiments
+      };
 
       // Check for milestones
       const newlyCompletedMilestones = ProgressionService.checkMilestones(tempGameState);
@@ -204,7 +230,8 @@ const App: React.FC = () => {
         gameTurn: prev.gameTurn + 1,
         isLoadingEvent: false,
         marketNews: latestNewsItem ? [latestNewsItem, ...prev.marketNews].slice(0, 10) : prev.marketNews,
-        victoryAchieved: tempGameState.victoryAchieved
+        victoryAchieved: tempGameState.victoryAchieved,
+        marketSentiments: tempGameState.marketSentiments
       }));
     };
 
