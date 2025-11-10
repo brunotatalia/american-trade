@@ -1,102 +1,157 @@
 
-import React from 'react';
-import { Player, Commodity, Property, Skill, GameState } from '../types';
-import { MoneyIcon, ReputationIcon, CommodityIcon, PropertyIcon, SkillIcon, InfoIcon, TrendUpIcon, TrendDownIcon } from './icons';
-import { Card } from './ui/Card';
+import React, { useMemo, useState } from 'react';
+import { GameState } from '../types';
+import { MoneyIcon, TrendUpIcon, TrendDownIcon, PropertyIcon, CommodityIcon, SkillIcon } from './icons';
+import { formatDate } from '../services/historicalData';
 
 interface DashboardProps {
   gameState: GameState;
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode, subtext?: string }> = ({ title, value, icon, subtext }) => (
-  <Card className="flex-1 min-w-[150px]">
-    <div className="flex items-center space-x-3">
-      <div className="p-2 bg-gray-700 rounded-full">{icon}</div>
-      <div>
-        <p className="text-xs text-gray-400">{title}</p>
-        <p className="text-xl font-bold text-gray-100">{value}</p>
-        {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
-      </div>
-    </div>
-  </Card>
-);
-
-
 export const Dashboard: React.FC<DashboardProps> = ({ gameState }) => {
-  const { player, commodities, properties, skills, gameTurn, currentEra } = gameState;
+  const { player, commodities, properties, currentDate, currentEra, worldNewsHistory } = gameState;
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Calculate portfolio value
+  const portfolioValue = useMemo(() => {
+    let total = player.money;
+
+    // Add commodity values
+    Object.keys(player.commodities).forEach(id => {
+      const data = player.commodities[id];
+      const marketPrice = commodities[id]?.price || 0;
+      total += data.quantity * marketPrice;
+    });
+
+    // Add property values
+    Object.keys(player.properties).forEach(id => {
+      total += player.properties[id].currentValue;
+    });
+
+    // Add leveraged positions
+    player.leveragedPositions?.forEach(pos => {
+      total += pos.currentValue;
+    });
+
+    return total;
+  }, [player, commodities]);
+
+  // Calculate total profit/loss
+  const totalProfitLoss = useMemo(() => {
+    let pl = 0;
+    Object.keys(player.commodities).forEach(id => {
+      const data = player.commodities[id];
+      const marketPrice = commodities[id]?.price || 0;
+      const totalValue = data.quantity * marketPrice;
+      pl += totalValue - (data.avgBuyPrice * data.quantity);
+    });
+    return pl;
+  }, [player.commodities, commodities]);
+
+  const isPositive = totalProfitLoss >= 0;
+
+  if (isCollapsed) {
+    return (
+      <div className="bg-gradient-to-r from-gray-800 to-gray-850 px-3 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">💰</span>
+            <span className="text-white font-bold">${player.money.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">📊</span>
+            <span className="text-green-400 font-bold">${portfolioValue.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">📅</span>
+            <span className="text-gray-300">{formatDate(currentDate)}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+        >
+          ▼ Expand
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex flex-wrap gap-4 mb-4">
-        <StatCard title="Money" value={`$${player.money.toLocaleString()}`} icon={<MoneyIcon className="text-green-400"/>} />
-        <StatCard title="Reputation" value={player.reputation} icon={<ReputationIcon className="text-blue-400"/>} />
-        <StatCard title="Game Turn" value={gameTurn} icon={<InfoIcon className="text-yellow-400"/>} subtext={currentEra?.name || ''} />
+    <div className="bg-gradient-to-r from-gray-800 to-gray-850 px-3 py-2">
+      {/* Compact Header with Toggle */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-gray-300 font-medium">{currentEra?.name}</span>
+          <span className="text-gray-500">•</span>
+          <span className="text-white">{formatDate(currentDate)}</span>
+          <span className="text-gray-500">•</span>
+          <span className="text-gray-400">Turn {gameState.gameTurn}</span>
+        </div>
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+        >
+          ▲ Collapse
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card title="Owned Commodities" icon={<CommodityIcon className="text-yellow-400"/>}>
-          {Object.keys(player.commodities).length > 0 ? (
-            <ul className="space-y-2 text-sm">
-              {/* FIX: Changed from Object.entries to Object.keys to fix type inference on 'data' */}
-              {Object.keys(player.commodities).map((id) => {
-                const data = player.commodities[id];
-                const commodityDetails = commodities[id];
-                const marketPrice = commodityDetails?.price || 0;
-                const totalValue = data.quantity * marketPrice;
-                const profitLoss = totalValue - (data.avgBuyPrice * data.quantity);
-                const isProfit = profitLoss >= 0;
+      {/* Compact Main Stats */}
+      <div className="grid grid-cols-4 gap-2 mb-2">
+        {/* Net Worth */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1.5 hover:border-green-600/50 transition-colors">
+          <p className="text-[10px] text-green-400 font-medium mb-0.5">NET WORTH</p>
+          <p className="text-lg font-bold text-white">${(portfolioValue / 1000).toFixed(1)}k</p>
+        </div>
 
-                return (
-                  <li key={id} className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                    <div>
-                      <span className="font-semibold">{commodities[id]?.name || id}</span>: {data.quantity} units
-                      <br/>
-                      <span className="text-xs text-gray-400">Avg Buy: ${data.avgBuyPrice.toFixed(2)} | Market: ${marketPrice.toFixed(2)}</span>
-                    </div>
-                    <div className={`flex items-center text-xs ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                      {isProfit ? <TrendUpIcon className="mr-1"/> : <TrendDownIcon className="mr-1"/>}
-                      {isProfit ? '+' : ''}${profitLoss.toFixed(2)}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No commodities owned.</p>
-          )}
-        </Card>
+        {/* Cash */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1.5 hover:border-blue-600/50 transition-colors">
+          <p className="text-[10px] text-blue-400 font-medium mb-0.5">CASH</p>
+          <p className="text-lg font-bold text-white">${(player.money / 1000).toFixed(1)}k</p>
+        </div>
 
-        <Card title="Owned Properties" icon={<PropertyIcon className="text-green-400"/>}>
-          {player.properties.length > 0 ? (
-            <ul className="space-y-2 text-sm">
-              {player.properties.map(id => (
-                <li key={id} className="p-2 bg-gray-700 rounded">
-                  <span className="font-semibold">{properties[id]?.name || id}</span>
-                  <br/>
-                  <span className="text-xs text-gray-400">Rent/Turn: ${properties[id]?.rentPerTurn.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No properties owned.</p>
-          )}
-        </Card>
+        {/* P/L */}
+        <div className={`bg-gray-900/50 border ${isPositive ? 'border-green-700/50' : 'border-red-700/50'} rounded px-2 py-1.5`}>
+          <p className="text-[10px] text-gray-400 font-medium mb-0.5">P/L</p>
+          <p className={`text-lg font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {isPositive ? '+' : ''}${(totalProfitLoss / 1000).toFixed(1)}k
+          </p>
+        </div>
 
-        <Card title="Unlocked Skills" icon={<SkillIcon className="text-purple-400"/>}>
-          {player.skills.length > 0 ? (
-            <ul className="space-y-2 text-sm">
-              {player.skills.map(id => (
-                <li key={id} className="p-2 bg-gray-700 rounded">
-                  <span className="font-semibold">{skills[id]?.name || id}</span>
-                   <br/>
-                  <span className="text-xs text-gray-400">{skills[id]?.effectDescription}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No skills unlocked.</p>
-          )}
-        </Card>
+        {/* Holdings */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1.5 hover:border-purple-600/50 transition-colors">
+          <p className="text-[10px] text-purple-400 font-medium mb-0.5">HOLDINGS</p>
+          <p className="text-lg font-bold text-white">
+            {Object.keys(player.commodities).length + Object.keys(player.properties).length}
+          </p>
+        </div>
+      </div>
+
+      {/* Compact Secondary Info */}
+      <div className="grid grid-cols-3 gap-2">
+        {/* Skills */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">SKILLS</span>
+            <span className="text-sm font-bold text-purple-400">{player.skills.length}</span>
+          </div>
+        </div>
+
+        {/* Reputation */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">REPUTATION</span>
+            <span className="text-sm font-bold text-yellow-400">{player.reputation}</span>
+          </div>
+        </div>
+
+        {/* Achievements */}
+        <div className="bg-gray-900/50 border border-gray-700 rounded px-2 py-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">ACHIEVEMENTS</span>
+            <span className="text-sm font-bold text-green-400">{player.achievements.length}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

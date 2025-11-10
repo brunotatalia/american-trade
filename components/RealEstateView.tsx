@@ -31,13 +31,16 @@ export const RealEstateView: React.FC<RealEstateViewProps> = ({ gameState, onBuy
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {availableProperties.map((property) => {
-          const isOwned = player.properties.includes(property.id);
-          const canAfford = player.money >= property.cost;
+          const isOwned = !!player.properties[property.id];
+          // Include 6% transaction fee in affordability check
+          const totalCost = property.cost * 1.06;
+          const canAfford = player.money >= totalCost;
           return (
             <Card key={property.id} title={property.name} icon={property.icon || <BuildingIcon />}>
               <p className="text-sm text-gray-400 mb-2">{property.description}</p>
               <div className="space-y-1 text-sm mb-4">
                 <p><span className="font-semibold text-gray-300">Cost:</span> ${property.cost.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">(+6% commission = ${totalCost.toLocaleString()} total)</p>
                 <p><span className="font-semibold text-gray-300">Rent per Turn:</span> ${property.rentPerTurn.toLocaleString()}</p>
               </div>
               <Button

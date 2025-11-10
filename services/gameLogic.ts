@@ -1,11 +1,26 @@
 
 
-import { GameState, Commodity, Player, Property, Skill, LogEntry, GameEvent, Era, Order } from '../types';
-import { SKILLS_DATA } from '../constants';
-import { generateGameEventDescription, generateMarketNews } from './geminiService';
+import { GameState, Commodity, Player, Property, Skill, LogEntry, GameEvent, Era, Order, GameDate, WorldNewsEvent } from '../types';
+import {
+  SKILLS_DATA,
+  COMMODITY_TRANSACTION_FEE,
+  STOCK_TRANSACTION_FEE,
+  CAPITAL_GAINS_TAX_SHORT,
+  PROPERTY_TRANSACTION_FEE,
+  PROPERTY_MAINTENANCE_RATE,
+  TURNS_PER_YEAR,
+  PROPERTY_APPRECIATION_RATE,
+  BOND_YIELD_TREASURY,
+  BOND_YIELD_CORPORATE,
+  MARKET_DEPTH_IMPACT_THRESHOLD,
+  MAX_SLIPPAGE_PERCENT,
+  ERAS_DATA
+} from '../constants';
+import { generateGameEventDescription, generateMarketNews, isGeminiAvailable } from './geminiService';
+import { getHistoricalPrice, advanceMonth, getNewsForDate, compareDates } from './historicalData';
 
 export const updateMarketPrices = (
-    commodities: Record<string, Commodity>, 
+    commodities: Record<string, Commodity>,
     era: Era,
     playerSkills: string[]
 ): Record<string, Commodity> => {
@@ -27,26 +42,183 @@ export const updateMarketPrices = (
   return updatedCommodities;
 };
 
-export const calculatePlayerIncome = (player: Player, properties: Record<string, Property>, skills: Record<string, Skill>): number => {
-  let income = 0;
-  const hasRealEstateMgmt = player.skills.includes('REAL_ESTATE_MGMT');
+/**
+ * Update market prices based on historical data
+ * Uses real historical prices when available, adds small random variation
+ */
+export const updateMarketPricesHistorical = (
+  commodities: Record<string, Commodity>,
+  currentDate: GameDate,
+  era: Era
+): Record<string, Commodity> => {
+  const updatedCommodities = { ...commodities };
 
-  player.properties.forEach(propId => {
+  for (const id in updatedCommodities) {
+    const commodity = updatedCommodities[id];
+    const historicalPrice = getHistoricalPrice(id, currentDate);
+
+    if (historicalPrice !== null) {
+      // Use historical price with small random variation to simulate intraday volatility
+      const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
+      const newPrice = historicalPrice * (1 + variation);
+      updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+    } else {
+      // Fall back to random price changes if no historical data available
+      let volatility = commodity.volatility * era.marketVolatilityModifier;
+      const priceChangePercentage = (Math.random() - 0.5) * 2 * volatility;
+      let newPrice = commodity.price * (1 + priceChangePercentage);
+      newPrice = Math.max(0.01, newPrice);
+      updatedCommodities[id] = { ...commodity, price: parseFloat(newPrice.toFixed(2)) };
+    }
+  }
+
+  return updatedCommodities;
+};
+
+/**
+ * Advance the game date by one month
+ * Check if era transition is needed
+ */
+export const advanceGameDate = (currentDate: GameDate, currentEra: Era): { newDate: GameDate; newEra: Era | null } => {
+  const newDate = advanceMonth(currentDate);
+
+  // Check if we need to transition to a new era
+  if (compareDates(newDate, currentEra.endDate) > 0) {
+    // Find the next era
+    const currentEraIndex = ERAS_DATA.findIndex(e => e.id === currentEra.id);
+    if (currentEraIndex >= 0 && currentEraIndex < ERAS_DATA.length - 1) {
+      const nextEra = ERAS_DATA[currentEraIndex + 1];
+      return { newDate, newEra: nextEra };
+    }
+  }
+
+  return { newDate, newEra: null };
+};
+
+/**
+ * Check for world news events for the current date
+ */
+export const checkForWorldNews = (date: GameDate): WorldNewsEvent[] => {
+  return getNewsForDate(date);
+};
+
+// Price history tracking for charts
+export const updatePriceHistory = (
+  priceHistory: Record<string, import('../types').PriceHistory[]>,
+  commodities: Record<string, Commodity>,
+  previousCommodities: Record<string, Commodity>,
+  currentTurn: number,
+  maxHistoryLength: number = 100
+): Record<string, import('../types').PriceHistory[]> => {
+  const updatedHistory = { ...priceHistory };
+
+  for (const id in commodities) {
+    const currentPrice = commodities[id].price;
+    const previousPrice = previousCommodities[id]?.price || currentPrice;
+
+    if (!updatedHistory[id]) {
+      updatedHistory[id] = [];
+    }
+
+    // Create candlestick data
+    // For simplicity, we'll use the previous close as open, and add some variation for high/low
+    const open = previousPrice;
+    const close = currentPrice;
+    const priceRange = Math.abs(currentPrice - previousPrice);
+    const high = Math.max(open, close) + (priceRange * Math.random() * 0.3);
+    const low = Math.min(open, close) - (priceRange * Math.random() * 0.3);
+
+    const candlestick: import('../types').PriceHistory = {
+      turn: currentTurn,
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
+      volume: Math.floor(Math.random() * 10000) + 1000 // Simulated volume
+    };
+
+    updatedHistory[id] = [...updatedHistory[id], candlestick].slice(-maxHistoryLength);
+  }
+
+  return updatedHistory;
+};
+
+export const calculatePlayerIncome = (
+  player: Player,
+  properties: Record<string, Property>,
+  skills: Record<string, Skill>,
+  commodities: Record<string, Commodity>
+): number => {
+  let income = 0;
+
+  // Real estate income
+  const hasRealEstateMgmt = player.skills.includes('REAL_ESTATE_MGMT');
+  Object.keys(player.properties).forEach(propId => {
     const prop = properties[propId];
     if (prop) {
-        let rent = prop.rentPerTurn;
-        if(hasRealEstateMgmt) {
-            rent *= 1.10; // Real Estate Management skill increases rent by 10%
-        }
-        income += rent;
+      let rent = prop.rentPerTurn;
+      if (hasRealEstateMgmt) {
+        rent *= 1.15; // Real Estate Management skill increases rent by 15%
+      }
+
+      // Calculate maintenance costs (per turn, based on annual rate)
+      const propertyValue = player.properties[propId].currentValue;
+      const maintenancePerTurn = (propertyValue * PROPERTY_MAINTENANCE_RATE) / TURNS_PER_YEAR;
+
+      income += rent - maintenancePerTurn;
     }
   });
-  // Future: Add income from side careers, dividends etc.
+
+  // Bond yields (passive income from treasury and corporate bonds)
+  const treasuryBonds = player.commodities['TREASURY_BONDS'];
+  if (treasuryBonds) {
+    const yieldPerTurn = (treasuryBonds.quantity * treasuryBonds.avgBuyPrice * BOND_YIELD_TREASURY) / TURNS_PER_YEAR;
+    income += yieldPerTurn;
+  }
+
+  const corporateBonds = player.commodities['CORPORATE_BONDS'];
+  if (corporateBonds) {
+    const yieldPerTurn = (corporateBonds.quantity * corporateBonds.avgBuyPrice * BOND_YIELD_CORPORATE) / TURNS_PER_YEAR;
+    income += yieldPerTurn;
+  }
+
   return parseFloat(income.toFixed(2));
+};
+
+// New function to update property values based on appreciation
+export const updatePropertyValues = (
+  player: Player,
+  properties: Record<string, Property>,
+  skills: string[]
+): Player => {
+  const hasPropertyDevelopment = skills.includes('PROPERTY_DEVELOPMENT');
+  const appreciationModifier = hasPropertyDevelopment ? 1.5 : 1.0; // 50% faster appreciation
+
+  const updatedProperties = { ...player.properties };
+
+  Object.keys(updatedProperties).forEach(propId => {
+    const prop = properties[propId];
+    if (prop) {
+      const currentValue = updatedProperties[propId].currentValue;
+      const appreciationRate = (prop.appreciationRate || PROPERTY_APPRECIATION_RATE) * appreciationModifier;
+      const appreciationPerTurn = (currentValue * appreciationRate) / TURNS_PER_YEAR;
+
+      updatedProperties[propId] = {
+        ...updatedProperties[propId],
+        currentValue: parseFloat((currentValue + appreciationPerTurn).toFixed(2))
+      };
+    }
+  });
+
+  return { ...player, properties: updatedProperties };
 };
 
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
+
+  // Don't create events if Gemini is not available
+  if (!isGeminiAvailable()) return null;
+
   // Simple chance to trigger an event
   if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
     return null;
@@ -107,26 +279,65 @@ export const createLog = (message: string, type: LogEntry['type']): LogEntry => 
   return { message, type, timestamp: new Date() };
 };
 
+// Helper function to get transaction fee based on commodity type
+const getTransactionFee = (commodity: Commodity): number => {
+  const category = commodity.category;
+  if (category === 'stock' || category === 'crypto') {
+    return STOCK_TRANSACTION_FEE;
+  }
+  return COMMODITY_TRANSACTION_FEE;
+};
+
+// Helper function to calculate slippage for large orders
+const calculateSlippage = (quantity: number, basePrice: number): number => {
+  if (quantity <= MARKET_DEPTH_IMPACT_THRESHOLD) {
+    return 0;
+  }
+  const excessQuantity = quantity - MARKET_DEPTH_IMPACT_THRESHOLD;
+  const slippagePercent = Math.min(
+    (excessQuantity / MARKET_DEPTH_IMPACT_THRESHOLD) * 0.01,
+    MAX_SLIPPAGE_PERCENT
+  );
+  return basePrice * slippagePercent;
+};
+
 
 export const attemptBuyCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
-    skills: string[]
+    skills: string[],
+    currentTurn: number = 0
 ): { player?: Player, log?: LogEntry, success: boolean } => {
-    
+
+    if (quantity <= 0) {
+        return { log: createLog(`Invalid quantity.`, 'error'), success: false };
+    }
+
+    // Calculate slippage for large orders
+    const slippage = calculateSlippage(quantity, commodity.price);
+    const effectivePrice = commodity.price + slippage;
+
+    // Apply negotiation skill discount
     let priceMultiplier = 1;
-    if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
+    if (skills.includes(SKILLS_DATA.ADVANCED_NEGOTIATION.id)) {
+        priceMultiplier = 0.96; // 4% discount with Advanced Negotiation
+    } else if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 0.98; // 2% discount with Basic Negotiation
     }
 
-    const totalCost = commodity.price * quantity * priceMultiplier;
+    // Calculate transaction fee
+    let transactionFeeRate = getTransactionFee(commodity);
+    if (skills.includes(SKILLS_DATA.ADVANCED_NEGOTIATION.id)) {
+        transactionFeeRate *= 0.75; // 25% reduction in fees
+    }
+
+    const subtotal = effectivePrice * quantity * priceMultiplier;
+    const transactionFee = subtotal * transactionFeeRate;
+    const totalCost = subtotal + transactionFee;
 
     if (player.money < totalCost) {
-        return { log: createLog(`Not enough money to buy ${quantity} ${commodity.name}. Need $${totalCost.toFixed(2)}.`, 'error'), success: false };
-    }
-    if (quantity <= 0) {
-        return { log: createLog(`Invalid quantity.`, 'error'), success: false };
+        return { log: createLog(`Not enough money to buy ${quantity} ${commodity.name}. Need $${totalCost.toFixed(2)} (includes ${(transactionFeeRate * 100).toFixed(2)}% fee).`, 'error'), success: false };
     }
 
     const newPlayerState = { ...player };
@@ -134,25 +345,35 @@ export const attemptBuyCommodity = (
 
     const existingAmount = newPlayerState.commodities[commodity.id]?.quantity || 0;
     const existingAvgPrice = newPlayerState.commodities[commodity.id]?.avgBuyPrice || 0;
-    
+
     const newTotalQuantity = existingAmount + quantity;
-    const newAvgBuyPrice = ((existingAvgPrice * existingAmount) + (commodity.price * priceMultiplier * quantity)) / newTotalQuantity;
+    const newAvgBuyPrice = ((existingAvgPrice * existingAmount) + (effectivePrice * priceMultiplier * quantity)) / newTotalQuantity;
 
     newPlayerState.commodities = {
         ...newPlayerState.commodities,
-        [commodity.id]: { quantity: newTotalQuantity, avgBuyPrice: parseFloat(newAvgBuyPrice.toFixed(2)) }
+        [commodity.id]: {
+            quantity: newTotalQuantity,
+            avgBuyPrice: parseFloat(newAvgBuyPrice.toFixed(2)),
+            purchasedTurn: currentTurn
+        }
     };
-    
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Bought ${quantity} ${commodity.name} for $${totalCost.toFixed(2)}. New avg price: $${newAvgBuyPrice.toFixed(2)}`, 'success'),
+
+    let message = `Bought ${quantity} ${commodity.name} for $${totalCost.toFixed(2)}`;
+    if (slippage > 0) {
+        message += ` (incl. ${slippage.toFixed(2)} slippage)`;
+    }
+    message += `. Fee: $${transactionFee.toFixed(2)}`;
+
+    return {
+        player: newPlayerState,
+        log: createLog(message, 'success'),
         success: true
     };
 };
 
 export const attemptSellCommodity = (
-    player: Player, 
-    commodity: Commodity, 
+    player: Player,
+    commodity: Commodity,
     quantity: number,
     skills: string[]
 ): { player?: Player, log?: LogEntry, success: boolean } => {
@@ -165,53 +386,108 @@ export const attemptSellCommodity = (
         return { log: createLog(`Not enough ${commodity.name} to sell. Owned: ${currentOwned}.`, 'error'), success: false };
     }
 
+    // Calculate slippage for large sell orders (negative impact on sell price)
+    const slippage = calculateSlippage(quantity, commodity.price);
+    const effectivePrice = commodity.price - slippage;
+
+    // Apply negotiation skill bonus
     let priceMultiplier = 1;
-    if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
+    if (skills.includes(SKILLS_DATA.ADVANCED_NEGOTIATION.id)) {
+        priceMultiplier = 1.04; // 4% bonus with Advanced Negotiation
+    } else if (skills.includes(SKILLS_DATA.BASIC_NEGOTIATION.id)) {
         priceMultiplier = 1.02; // 2% bonus with Basic Negotiation
     }
-    
-    const totalRevenue = commodity.price * quantity * priceMultiplier;
+
+    // Calculate transaction fee
+    let transactionFeeRate = getTransactionFee(commodity);
+    if (skills.includes(SKILLS_DATA.ADVANCED_NEGOTIATION.id)) {
+        transactionFeeRate *= 0.75; // 25% reduction in fees
+    }
+
+    const grossRevenue = effectivePrice * quantity * priceMultiplier;
+    const transactionFee = grossRevenue * transactionFeeRate;
+
     const avgBuyPrice = player.commodities[commodity.id].avgBuyPrice;
     const costOfGoodsSold = avgBuyPrice * quantity;
-    const profit = totalRevenue - costOfGoodsSold;
+    const grossProfit = grossRevenue - costOfGoodsSold;
+
+    // Calculate capital gains tax (only on profits)
+    let capitalGainsTax = 0;
+    if (grossProfit > 0) {
+        let taxRate = CAPITAL_GAINS_TAX_SHORT;
+        if (skills.includes(SKILLS_DATA.TAX_OPTIMIZATION.id)) {
+            taxRate *= 0.6; // 40% reduction in taxes
+        }
+        capitalGainsTax = grossProfit * taxRate;
+    }
+
+    const netRevenue = grossRevenue - transactionFee - capitalGainsTax;
+    const netProfit = netRevenue - costOfGoodsSold;
 
     const newPlayerState = { ...player };
-    newPlayerState.money += totalRevenue;
-    newPlayerState.commodities = {
-        ...newPlayerState.commodities,
-        [commodity.id]: { ...newPlayerState.commodities[commodity.id], quantity: currentOwned - quantity }
-    };
+    newPlayerState.money += netRevenue;
 
-    if (newPlayerState.commodities[commodity.id].quantity === 0) {
-        delete newPlayerState.commodities[commodity.id]; // Clean up if zero quantity
+    const remainingQuantity = currentOwned - quantity;
+    if (remainingQuantity === 0) {
+        const { [commodity.id]: removed, ...remainingCommodities } = newPlayerState.commodities;
+        newPlayerState.commodities = remainingCommodities;
+    } else {
+        newPlayerState.commodities = {
+            ...newPlayerState.commodities,
+            [commodity.id]: {
+                ...newPlayerState.commodities[commodity.id],
+                quantity: remainingQuantity
+            }
+        };
     }
-    
-    const profitLossMsg = profit >= 0 ? `Profit: $${profit.toFixed(2)}` : `Loss: $${Math.abs(profit).toFixed(2)}`;
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}`, 'success'),
+
+    let message = `Sold ${quantity} ${commodity.name} for $${netRevenue.toFixed(2)}`;
+    if (slippage > 0) {
+        message += ` (${slippage.toFixed(2)} slippage)`;
+    }
+    message += `. Fee: $${transactionFee.toFixed(2)}`;
+    if (capitalGainsTax > 0) {
+        message += `, Tax: $${capitalGainsTax.toFixed(2)}`;
+    }
+    const profitLossMsg = netProfit >= 0 ? `Net Profit: $${netProfit.toFixed(2)}` : `Net Loss: $${Math.abs(netProfit).toFixed(2)}`;
+    message += `. ${profitLossMsg}`;
+
+    return {
+        player: newPlayerState,
+        log: createLog(message, 'success'),
         success: true
     };
 };
 
 export const attemptBuyProperty = (
-    player: Player, 
-    property: Property
+    player: Player,
+    property: Property,
+    currentTurn: number = 0
 ): { player?: Player, log?: LogEntry, success: boolean } => {
-    if (player.money < property.cost) {
-        return { log: createLog(`Not enough money to buy ${property.name}. Need $${property.cost.toFixed(2)}.`, 'error'), success: false };
+    // Calculate transaction fee (realtor commission)
+    const transactionFee = property.cost * PROPERTY_TRANSACTION_FEE;
+    const totalCost = property.cost + transactionFee;
+
+    if (player.money < totalCost) {
+        return { log: createLog(`Not enough money to buy ${property.name}. Need $${totalCost.toFixed(2)} (includes ${(PROPERTY_TRANSACTION_FEE * 100).toFixed(1)}% commission).`, 'error'), success: false };
     }
-    if (player.properties.includes(property.id)) {
+    if (player.properties[property.id]) {
         return { log: createLog(`You already own ${property.name}.`, 'warning'), success: false };
     }
 
     const newPlayerState = { ...player };
-    newPlayerState.money -= property.cost;
-    newPlayerState.properties = [...newPlayerState.properties, property.id];
-    
-    return { 
-        player: newPlayerState, 
-        log: createLog(`Bought ${property.name} for $${property.cost.toFixed(2)}.`, 'success'),
+    newPlayerState.money -= totalCost;
+    newPlayerState.properties = {
+        ...newPlayerState.properties,
+        [property.id]: {
+            purchasedTurn: currentTurn,
+            currentValue: property.cost
+        }
+    };
+
+    return {
+        player: newPlayerState,
+        log: createLog(`Bought ${property.name} for $${totalCost.toFixed(2)} (includes $${transactionFee.toFixed(2)} commission).`, 'success'),
         success: true
     };
 };
@@ -332,7 +608,8 @@ export const attemptCancelOrder = (
 export const processPendingOrders = (
   player: Player,
   commodities: Record<string, Commodity>,
-  skills: string[]
+  skills: string[],
+  currentTurn: number = 0
 ): {
   player: Player;
   logs: LogEntry[];
@@ -362,11 +639,11 @@ export const processPendingOrders = (
       // For buys, we use the current market price, which is at or better (lower) than the limit.
       // For sells, we use the current market price, which is at or better (higher) than the limit, or triggered by stop-loss.
       if (order.type === 'LIMIT_BUY') {
-        result = attemptBuyCommodity(tempPlayer, commodity, order.quantity, skills);
+        result = attemptBuyCommodity(tempPlayer, commodity, order.quantity, skills, currentTurn);
       } else {
         result = attemptSellCommodity(tempPlayer, commodity, order.quantity, skills);
       }
-      
+
       if (result.success && result.player) {
         tempPlayer = result.player;
         tempLogs.push(createLog(`Order executed: ${order.type.replace('_', ' ')} ${order.quantity} ${commodity.name} at $${commodity.price.toFixed(2)}.`, 'success'));
@@ -383,4 +660,681 @@ export const processPendingOrders = (
 
   tempPlayer.orders = remainingOrders;
   return { player: tempPlayer, logs: tempLogs };
+};
+
+// Job system functions
+export const selectJob = (
+  player: Player,
+  jobId: string
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const newPlayerState = { ...player };
+  newPlayerState.currentJob = jobId;
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Selected new job. Ready to work!`, 'action'),
+    success: true
+  };
+};
+
+export const processJobResult = (
+  player: Player,
+  jobId: string,
+  result: import('../types').MiniGameResult
+): { player: Player; log: LogEntry } => {
+  const newPlayerState = { ...player };
+
+  // Initialize job performance if it doesn't exist
+  if (!newPlayerState.jobPerformance[jobId]) {
+    newPlayerState.jobPerformance[jobId] = {
+      jobId,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      averageScore: 0,
+      bestScore: 0,
+      totalEarnings: 0,
+      streak: 0
+    };
+  }
+
+  const perf = { ...newPlayerState.jobPerformance[jobId] };
+
+  // Update stats
+  perf.gamesPlayed += 1;
+  if (result.passed) {
+    perf.gamesWon += 1;
+    perf.streak += 1;
+  } else {
+    perf.streak = 0; // Reset streak on failure
+  }
+
+  // Update scores
+  perf.averageScore = ((perf.averageScore * (perf.gamesPlayed - 1)) + result.score) / perf.gamesPlayed;
+  if (result.score > perf.bestScore) {
+    perf.bestScore = result.score;
+  }
+
+  // Calculate earnings with streak bonus
+  let finalEarnings = result.earnings;
+  if (perf.streak >= 10) {
+    finalEarnings *= 2.0; // 100% bonus at 10+ streak
+  } else if (perf.streak >= 5) {
+    finalEarnings *= 1.5; // 50% bonus at 5-9 streak
+  }
+
+  perf.totalEarnings += finalEarnings;
+
+  // Update player
+  newPlayerState.money += finalEarnings;
+  newPlayerState.jobPerformance[jobId] = perf;
+
+  // Create log message
+  let message = `Work shift complete! Earned $${finalEarnings.toFixed(2)} (${result.performanceRating})`;
+  if (perf.streak >= 5) {
+    message += ` 🔥 ${perf.streak} streak bonus!`;
+  }
+
+  return {
+    player: newPlayerState,
+    log: createLog(message, result.passed ? 'success' : 'warning')
+  };
+};
+
+// Options trading functions
+export const buyOption = (
+  player: Player,
+  commodityId: string,
+  type: 'CALL' | 'PUT',
+  strikePrice: number,
+  premium: number,
+  quantity: number,
+  expirationTurns: number,
+  currentTurn: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const totalCost = premium * quantity;
+
+  if (player.money < totalCost) {
+    return { log: createLog(`Not enough money to buy option. Need $${totalCost.toFixed(2)}.`, 'error'), success: false };
+  }
+
+  const newPlayerState = { ...player };
+  newPlayerState.money -= totalCost;
+
+  const newOption: import('../types').OptionsContract = {
+    id: `option-${Date.now()}-${Math.random()}`,
+    commodityId,
+    type,
+    strikePrice: parseFloat(strikePrice.toFixed(2)),
+    premium,
+    expirationTurn: currentTurn + expirationTurns,
+    quantity,
+    purchasedAtTurn: currentTurn
+  };
+
+  newPlayerState.optionsContracts = [...newPlayerState.optionsContracts, newOption];
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Bought ${quantity} ${type} option(s) for $${totalCost.toFixed(2)}.`, 'action'),
+    success: true
+  };
+};
+
+export const exerciseOption = (
+  player: Player,
+  optionId: string,
+  commodities: Record<string, Commodity>
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const option = player.optionsContracts.find(o => o.id === optionId);
+  if (!option) {
+    return { log: createLog('Option not found.', 'error'), success: false };
+  }
+
+  const commodity = commodities[option.commodityId];
+  if (!commodity) {
+    return { log: createLog('Commodity not found.', 'error'), success: false };
+  }
+
+  // Calculate intrinsic value
+  const intrinsicValue = option.type === 'CALL'
+    ? Math.max(0, commodity.price - option.strikePrice)
+    : Math.max(0, option.strikePrice - commodity.price);
+
+  if (intrinsicValue <= 0) {
+    return { log: createLog('Option is not in the money. Cannot exercise.', 'warning'), success: false };
+  }
+
+  const totalProfit = intrinsicValue * option.quantity;
+  const totalCost = option.premium * option.quantity;
+  const netProfit = totalProfit - totalCost;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += totalProfit;
+  newPlayerState.optionsContracts = newPlayerState.optionsContracts.filter(o => o.id !== optionId);
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Exercised ${option.type} option. Profit: $${totalProfit.toFixed(2)}. Net: $${netProfit.toFixed(2)}`, netProfit >= 0 ? 'success' : 'warning'),
+    success: true
+  };
+};
+
+export const sellOption = (
+  player: Player,
+  optionId: string,
+  commodities: Record<string, Commodity>
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const option = player.optionsContracts.find(o => o.id === optionId);
+  if (!option) {
+    return { log: createLog('Option not found.', 'error'), success: false };
+  }
+
+  const commodity = commodities[option.commodityId];
+  if (!commodity) {
+    return { log: createLog('Commodity not found.', 'error'), success: false };
+  }
+
+  // Calculate current value (simplified - just intrinsic value)
+  const intrinsicValue = option.type === 'CALL'
+    ? Math.max(0, commodity.price - option.strikePrice)
+    : Math.max(0, option.strikePrice - commodity.price);
+
+  const sellPrice = intrinsicValue * option.quantity * 0.9; // 10% haircut for early sale
+  const totalCost = option.premium * option.quantity;
+  const netProfit = sellPrice - totalCost;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += sellPrice;
+  newPlayerState.optionsContracts = newPlayerState.optionsContracts.filter(o => o.id !== optionId);
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Sold ${option.type} option for $${sellPrice.toFixed(2)}. Net: $${netProfit.toFixed(2)}`, netProfit >= 0 ? 'success' : 'warning'),
+    success: true
+  };
+};
+
+// Process expired options
+export const processExpiredOptions = (
+  player: Player,
+  currentTurn: number
+): { player: Player; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const logs: LogEntry[] = [];
+
+  const expiredOptions = player.optionsContracts.filter(o => o.expirationTurn <= currentTurn);
+  const activeOptions = player.optionsContracts.filter(o => o.expirationTurn > currentTurn);
+
+  if (expiredOptions.length > 0) {
+    expiredOptions.forEach(option => {
+      const totalCost = option.premium * option.quantity;
+      logs.push(createLog(`${option.type} option expired worthless. Lost $${totalCost.toFixed(2)}.`, 'warning'));
+    });
+    newPlayerState.optionsContracts = activeOptions;
+  }
+
+  return { player: newPlayerState, logs };
+};
+
+// Leverage trading functions
+export const openLeveragePosition = (
+  player: Player,
+  commodityId: string,
+  type: 'LONG' | 'SHORT',
+  leverage: number,
+  quantity: number,
+  currentPrice: number,
+  currentTurn: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  // Calculate margin requirement
+  const positionSize = currentPrice * quantity;
+  const marginRequired = positionSize / leverage;
+
+  if (player.money < marginRequired) {
+    return { log: createLog(`Not enough money for margin. Need $${marginRequired.toFixed(2)}.`, 'error'), success: false };
+  }
+
+  // Check trading level for leverage
+  if (player.tradingLevel < leverage) {
+    return { log: createLog(`Trading level ${leverage} required for ${leverage}x leverage.`, 'error'), success: false };
+  }
+
+  // Calculate liquidation price
+  const liquidationPercent = 1 / leverage;
+  const liquidationPrice = type === 'LONG'
+    ? currentPrice * (1 - liquidationPercent)
+    : currentPrice * (1 + liquidationPercent);
+
+  const newPlayerState = { ...player };
+  newPlayerState.money -= marginRequired;
+
+  const newPosition: import('../types').LeveragedPosition = {
+    id: `leverage-${Date.now()}-${Math.random()}`,
+    commodityId,
+    type,
+    leverage,
+    entryPrice: currentPrice,
+    quantity,
+    margin: parseFloat(marginRequired.toFixed(2)),
+    currentValue: positionSize,
+    liquidationPrice: parseFloat(liquidationPrice.toFixed(2)),
+    openedAtTurn: currentTurn
+  };
+
+  newPlayerState.leveragedPositions = [...newPlayerState.leveragedPositions, newPosition];
+
+  return {
+    player: newPlayerState,
+    log: createLog(`Opened ${type} position with ${leverage}x leverage. Margin: $${marginRequired.toFixed(2)}`, 'action'),
+    success: true
+  };
+};
+
+export const closeLeveragePosition = (
+  player: Player,
+  positionId: string,
+  currentPrice: number
+): { player?: Player; log?: LogEntry; success: boolean } => {
+  const position = player.leveragedPositions.find(p => p.id === positionId);
+  if (!position) {
+    return { log: createLog('Position not found.', 'error'), success: false };
+  }
+
+  // Calculate P&L
+  const priceChange = currentPrice - position.entryPrice;
+  const pnl = position.type === 'LONG'
+    ? priceChange * position.quantity * position.leverage
+    : -priceChange * position.quantity * position.leverage;
+
+  const finalValue = position.margin + pnl;
+
+  const newPlayerState = { ...player };
+  newPlayerState.money += finalValue;
+  newPlayerState.leveragedPositions = newPlayerState.leveragedPositions.filter(p => p.id !== positionId);
+
+  // Increase trading level if profitable trade
+  if (pnl > 0 && position.leverage >= newPlayerState.tradingLevel) {
+    const levelUpThreshold = 10; // Need 10 profitable trades at current level
+    // This is simplified - could track successful trades per level
+    if (Math.random() < 0.1) { // 10% chance to level up on profitable trade
+      newPlayerState.tradingLevel = Math.min(10, newPlayerState.tradingLevel + 1);
+    }
+  }
+
+  return {
+    player: newPlayerState,
+    log: createLog(
+      `Closed ${position.type} position. P&L: $${pnl.toFixed(2)} (${((pnl/position.margin)*100).toFixed(2)}%)`,
+      pnl >= 0 ? 'success' : 'error'
+    ),
+    success: true
+  };
+};
+
+export const updateLeveragePositions = (
+  player: Player,
+  commodities: Record<string, Commodity>
+): Player => {
+  const updatedPositions = player.leveragedPositions.map(position => {
+    const commodity = commodities[position.commodityId];
+    if (!commodity) return position;
+
+    const currentValue = commodity.price * position.quantity;
+    return { ...position, currentValue: parseFloat(currentValue.toFixed(2)) };
+  });
+
+  return { ...player, leveragedPositions: updatedPositions };
+};
+
+export const processLiquidations = (
+  player: Player,
+  commodities: Record<string, Commodity>
+): { player: Player; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const logs: LogEntry[] = [];
+  const activePositions: import('../types').LeveragedPosition[] = [];
+
+  for (const position of player.leveragedPositions) {
+    const commodity = commodities[position.commodityId];
+    if (!commodity) {
+      activePositions.push(position);
+      continue;
+    }
+
+    const isLiquidated = position.type === 'LONG'
+      ? commodity.price <= position.liquidationPrice
+      : commodity.price >= position.liquidationPrice;
+
+    if (isLiquidated) {
+      // Position is liquidated - lose the margin
+      logs.push(createLog(
+        `⚠️ ${position.type} position LIQUIDATED! Lost $${position.margin.toFixed(2)} margin.`,
+        'error'
+      ));
+      // Margin is already deducted, so no money change
+    } else {
+      activePositions.push(position);
+    }
+  }
+
+  newPlayerState.leveragedPositions = activePositions;
+  return { player: newPlayerState, logs };
+};
+
+// ========================================
+// Advanced Trading Mechanics
+// ========================================
+
+/**
+ * Generate random market sentiment for a commodity
+ * Sentiments influence price movements beyond normal volatility
+ */
+export const generateMarketSentiment = (
+  commodityId: string,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): import('../types').MarketSentiment | null => {
+  const commodity = commodities[commodityId];
+  if (!commodity) return null;
+
+  // 5% chance per turn to generate sentiment for any commodity
+  if (Math.random() > 0.05) return null;
+
+  const sentimentTypes = [
+    { level: 0.8, impact: 0.15, source: 'analyst' as const, desc: 'Strong analyst upgrade' },
+    { level: 0.5, impact: 0.08, source: 'news' as const, desc: 'Positive industry news' },
+    { level: 0.3, impact: 0.05, source: 'technical' as const, desc: 'Bullish technical pattern' },
+    { level: -0.3, impact: 0.05, source: 'technical' as const, desc: 'Bearish technical pattern' },
+    { level: -0.5, impact: 0.08, source: 'news' as const, desc: 'Negative industry news' },
+    { level: -0.8, impact: 0.15, source: 'analyst' as const, desc: 'Strong analyst downgrade' },
+    { level: 0.6, impact: 0.20, source: 'social' as const, desc: 'Viral social media hype' },
+    { level: 0.7, impact: 0.12, source: 'fundamental' as const, desc: 'Strong earnings report' },
+    { level: -0.7, impact: 0.12, source: 'fundamental' as const, desc: 'Weak earnings report' }
+  ];
+
+  const sentimentType = sentimentTypes[Math.floor(Math.random() * sentimentTypes.length)];
+  const duration = Math.floor(Math.random() * 5) + 3; // 3-7 turns
+
+  return {
+    id: `sentiment-${commodityId}-${currentTurn}`,
+    commodityId,
+    sentimentLevel: sentimentType.level,
+    impact: sentimentType.impact,
+    duration,
+    source: sentimentType.source,
+    description: sentimentType.desc,
+    createdAtTurn: currentTurn
+  };
+};
+
+/**
+ * Update active market sentiments (decay duration, remove expired)
+ */
+export const updateMarketSentiments = (
+  sentiments: import('../types').MarketSentiment[]
+): import('../types').MarketSentiment[] => {
+  return sentiments
+    .map(s => ({ ...s, duration: s.duration - 1 }))
+    .filter(s => s.duration > 0);
+};
+
+/**
+ * Apply market sentiment to price changes
+ * Modifies the updated commodities based on active sentiments
+ */
+export const applyMarketSentiment = (
+  commodities: Record<string, Commodity>,
+  sentiments: import('../types').MarketSentiment[]
+): Record<string, Commodity> => {
+  const updatedCommodities = { ...commodities };
+
+  for (const sentiment of sentiments) {
+    const commodity = updatedCommodities[sentiment.commodityId];
+    if (!commodity) continue;
+
+    // Apply sentiment impact to price
+    const priceChange = commodity.price * sentiment.impact * (sentiment.sentimentLevel > 0 ? 1 : -1);
+    const newPrice = Math.max(0.01, commodity.price + priceChange);
+
+    updatedCommodities[sentiment.commodityId] = {
+      ...commodity,
+      price: parseFloat(newPrice.toFixed(2))
+    };
+  }
+
+  return updatedCommodities;
+};
+
+/**
+ * Process dividend payments for eligible holdings
+ * Dividends are paid quarterly or annually based on commodity configuration
+ */
+export const processDividendPayments = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  let totalDividends = 0;
+
+  for (const commodityId in player.commodities) {
+    const holding = player.commodities[commodityId];
+    const commodity = commodities[commodityId];
+
+    if (!commodity || !commodity.dividendYield || commodity.dividendYield === 0) continue;
+
+    // Determine if dividend should be paid this turn
+    const frequency = commodity.dividendFrequency || 'annual';
+    const turnsPerPayment = frequency === 'quarterly' ? Math.floor(TURNS_PER_YEAR / 4) : TURNS_PER_YEAR;
+
+    const lastDividend = commodity.lastDividendTurn || 0;
+    const turnsSinceLastDividend = currentTurn - lastDividend;
+
+    if (turnsSinceLastDividend >= turnsPerPayment) {
+      // Calculate dividend payment
+      const holdingValue = holding.quantity * commodity.price;
+      const annualDividend = holdingValue * commodity.dividendYield;
+      const paymentDividend = frequency === 'quarterly' ? annualDividend / 4 : annualDividend;
+
+      totalDividends += paymentDividend;
+      newPlayerState.money += paymentDividend;
+
+      logs.push(createLog(
+        `💰 Dividend from ${commodity.name}: +$${paymentDividend.toFixed(2)} (${(commodity.dividendYield * 100).toFixed(2)}% yield)`,
+        'success'
+      ));
+
+      // Update last dividend turn in commodity
+      updatedCommodities[commodityId] = {
+        ...commodity,
+        lastDividendTurn: currentTurn
+      };
+    }
+  }
+
+  if (totalDividends > 0) {
+    newPlayerState.statistics = {
+      ...newPlayerState.statistics,
+      totalDividendsEarned: newPlayerState.statistics.totalDividendsEarned + totalDividends
+    };
+  }
+
+  return { player: newPlayerState, commodities: updatedCommodities, logs };
+};
+
+/**
+ * Schedule a stock split for a commodity
+ * Splits are announced in advance and executed later
+ */
+export const scheduleStockSplit = (
+  commodityId: string,
+  commodities: Record<string, Commodity>,
+  currentTurn: number,
+  announcementDelay: number = 5
+): import('../types').StockSplit | null => {
+  const commodity = commodities[commodityId];
+  if (!commodity || !commodity.canSplit) return null;
+
+  // Only split if price is high enough (above $300)
+  if (commodity.price < 300) return null;
+
+  // Common split ratios
+  const splitRatios = [2, 3]; // 2:1 or 3:1
+  const ratio = splitRatios[Math.floor(Math.random() * splitRatios.length)];
+
+  return {
+    id: `split-${commodityId}-${currentTurn}`,
+    commodityId,
+    ratio,
+    scheduledTurn: currentTurn + announcementDelay,
+    announced: false,
+    executed: false
+  };
+};
+
+/**
+ * Process scheduled stock splits
+ * Adjusts player holdings and commodity prices
+ */
+export const processStockSplits = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  splits: import('../types').StockSplit[],
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[]; updatedSplits: import('../types').StockSplit[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  const updatedSplits = splits.map(split => {
+    if (split.executed) return split;
+
+    // Announce upcoming splits
+    if (!split.announced && currentTurn === split.scheduledTurn - 3) {
+      logs.push(createLog(
+        `📢 ${updatedCommodities[split.commodityId]?.name} announces ${split.ratio}:1 stock split in 3 turns!`,
+        'info'
+      ));
+      return { ...split, announced: true };
+    }
+
+    // Execute split
+    if (currentTurn === split.scheduledTurn) {
+      const commodity = updatedCommodities[split.commodityId];
+      if (!commodity) return { ...split, executed: true };
+
+      // Adjust player holdings
+      if (newPlayerState.commodities[split.commodityId]) {
+        const holding = newPlayerState.commodities[split.commodityId];
+        newPlayerState.commodities[split.commodityId] = {
+          ...holding,
+          quantity: holding.quantity * split.ratio,
+          avgBuyPrice: holding.avgBuyPrice / split.ratio
+        };
+
+        logs.push(createLog(
+          `🔄 ${commodity.name} ${split.ratio}:1 split executed! Holdings: ${holding.quantity} → ${holding.quantity * split.ratio}`,
+          'success'
+        ));
+
+        // Update statistics
+        newPlayerState.statistics = {
+          ...newPlayerState.statistics,
+          stockSplitsExperienced: newPlayerState.statistics.stockSplitsExperienced + 1
+        };
+      }
+
+      // Adjust commodity price
+      updatedCommodities[split.commodityId] = {
+        ...commodity,
+        price: parseFloat((commodity.price / split.ratio).toFixed(2))
+      };
+
+      return { ...split, executed: true };
+    }
+
+    return split;
+  });
+
+  // Remove executed splits
+  const activeSplits = updatedSplits.filter(s => !s.executed);
+
+  return {
+    player: newPlayerState,
+    commodities: updatedCommodities,
+    logs,
+    updatedSplits: activeSplits
+  };
+};
+
+/**
+ * Check for bankruptcy events
+ * Commodities with bankruptcy risk may crash to near-zero
+ */
+export const processBankruptcyChecks = (
+  player: Player,
+  commodities: Record<string, Commodity>,
+  currentTurn: number
+): { player: Player; commodities: Record<string, Commodity>; logs: LogEntry[]; bankruptcyEvents: import('../types').BankruptcyEvent[] } => {
+  const newPlayerState = { ...player };
+  const updatedCommodities = { ...commodities };
+  const logs: LogEntry[] = [];
+  const bankruptcyEvents: import('../types').BankruptcyEvent[] = [];
+
+  for (const commodityId in commodities) {
+    const commodity = commodities[commodityId];
+    if (!commodity.bankruptcyRisk || commodity.bankruptcyRisk === 0) continue;
+
+    // Check bankruptcy probability (annual risk converted to per-turn)
+    const turnRisk = commodity.bankruptcyRisk / TURNS_PER_YEAR;
+    const bankrupt = Math.random() < turnRisk;
+
+    if (bankrupt) {
+      const holding = player.commodities[commodityId];
+      const playerLosses = holding ? holding.quantity * commodity.price : 0;
+
+      // Crash the price to near-zero
+      updatedCommodities[commodityId] = {
+        ...commodity,
+        price: 0.01,
+        volatility: 0.01 // Lock volatility low
+      };
+
+      logs.push(createLog(
+        `💥 BANKRUPTCY: ${commodity.name} has collapsed! Price crashed to $0.01`,
+        'error'
+      ));
+
+      if (playerLosses > 0) {
+        logs.push(createLog(
+          `📉 You lost $${playerLosses.toFixed(2)} in ${commodity.name} holdings`,
+          'error'
+        ));
+
+        // Update player holdings to reflect crashed value
+        newPlayerState.statistics = {
+          ...newPlayerState.statistics,
+          bankruptciesExperienced: newPlayerState.statistics.bankruptciesExperienced + 1,
+          totalLoss: newPlayerState.statistics.totalLoss + playerLosses
+        };
+      }
+
+      bankruptcyEvents.push({
+        id: `bankruptcy-${commodityId}-${currentTurn}`,
+        commodityId,
+        triggerTurn: currentTurn,
+        warningTurns: 0, // Could add warning system in future
+        finalPrice: commodity.price,
+        playerLosses
+      });
+    }
+  }
+
+  return {
+    player: newPlayerState,
+    commodities: updatedCommodities,
+    logs,
+    bankruptcyEvents
+  };
 };
