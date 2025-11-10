@@ -8,6 +8,7 @@ import {
   INITIAL_PLAYER_REPUTATION, GAME_TICK_INTERVAL_MS, MAX_LOG_ENTRIES,
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
 } from './constants';
+import { MILESTONES_DATA, WIN_CONDITIONS_DATA } from './progressionData';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
 import { EraSelector } from './components/EraSelector';
@@ -29,6 +30,21 @@ const App: React.FC = () => {
       properties: [],
       skills: [],
       orders: [],
+      tradingStats: {
+        totalTrades: 0,
+        profitableTrades: 0,
+        totalProfit: 0,
+        totalDividends: 0
+      },
+      progress: {
+        currentTier: 0,
+        tierProgress: 0,
+        completedMilestones: [],
+        claimedMilestones: [],
+        achievements: [],
+        highestNetWorth: 0,
+        totalMoneyEarned: 0
+      }
     },
     currentEra: null,
     commodities: COMMODITIES_DATA,
@@ -40,6 +56,9 @@ const App: React.FC = () => {
     gameStarted: false,
     isLoadingEvent: false,
     marketNews: [],
+    marketSentiments: [],
+    milestones: MILESTONES_DATA,
+    winConditions: WIN_CONDITIONS_DATA
   });
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
