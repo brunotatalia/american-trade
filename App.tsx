@@ -9,6 +9,7 @@ import {
   COMMODITIES_DATA, PROPERTIES_DATA, SKILLS_DATA, API_KEY_WARNING
 } from './constants';
 import { MILESTONES_DATA, WIN_CONDITIONS_DATA } from './progressionData';
+import { getRandomEvent } from './eventsData';
 import { isGeminiAvailable } from './services/geminiService';
 import * as GameLogic from './services/gameLogic';
 import { EraSelector } from './components/EraSelector';
@@ -179,7 +180,16 @@ const App: React.FC = () => {
       // Attempt to trigger a random event
       let newEvent: GameEvent | null = null;
       if (!gameState.currentEvent) { // Only trigger new event if no active event
-          newEvent = await GameLogic.createRandomGameEvent(tempGameState);
+          // Try dynamic events first (50% chance), then AI-generated events
+          if (Math.random() < 0.5) {
+            newEvent = getRandomEvent(tempGameState);
+          }
+          
+          // Fallback to AI-generated events if no dynamic event
+          if (!newEvent) {
+            newEvent = await GameLogic.createRandomGameEvent(tempGameState);
+          }
+          
           if (newEvent) {
             newLogs.push(GameLogic.createLog(`Event: ${newEvent.title} - ${newEvent.description}`, 'event'));
           }

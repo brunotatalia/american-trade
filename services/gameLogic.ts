@@ -47,11 +47,16 @@ export const calculatePlayerIncome = (player: Player, properties: Record<string,
 
 export const createRandomGameEvent = async (gameState: GameState): Promise<GameEvent | null> => {
   if (!gameState.currentEra) return null;
-  // Simple chance to trigger an event
-  if (Math.random() > 0.3) { // 30% chance per turn to trigger an event
+  
+  // 30% chance per turn to trigger an event
+  if (Math.random() > 0.3) {
     return null;
   }
 
+  // Try to get an event from the new dynamic events system
+  // This is imported from eventsData.ts in App.tsx
+  // For now, keep the AI-generated events as fallback
+  
   const playerStatusHint = `Money: ${gameState.player.money}, Reputation: ${gameState.player.reputation}`;
   const { title, description, type } = await generateGameEventDescription(gameState.currentEra.name, playerStatusHint);
   
