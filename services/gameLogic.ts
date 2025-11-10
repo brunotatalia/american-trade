@@ -155,7 +155,7 @@ export const attemptSellCommodity = (
     commodity: Commodity, 
     quantity: number,
     skills: string[]
-): { player?: Player, log?: LogEntry, success: boolean } => {
+): { player?: Player, log?: LogEntry, success: boolean, profit?: number, isProfitable?: boolean } => {
 
     const currentOwned = player.commodities[commodity.id]?.quantity || 0;
     if (quantity <= 0) {
@@ -174,9 +174,19 @@ export const attemptSellCommodity = (
     const avgBuyPrice = player.commodities[commodity.id].avgBuyPrice;
     const costOfGoodsSold = avgBuyPrice * quantity;
     const profit = totalRevenue - costOfGoodsSold;
+    const isProfitable = profit > 0;
 
     const newPlayerState = { ...player };
     newPlayerState.money += totalRevenue;
+    
+    // Update trading stats
+    newPlayerState.tradingStats = {
+        ...newPlayerState.tradingStats,
+        totalTrades: newPlayerState.tradingStats.totalTrades + 1,
+        profitableTrades: newPlayerState.tradingStats.profitableTrades + (isProfitable ? 1 : 0),
+        totalProfit: newPlayerState.tradingStats.totalProfit + profit
+    };
+    
     newPlayerState.commodities = {
         ...newPlayerState.commodities,
         [commodity.id]: { ...newPlayerState.commodities[commodity.id], quantity: currentOwned - quantity }
@@ -190,7 +200,9 @@ export const attemptSellCommodity = (
     return { 
         player: newPlayerState, 
         log: createLog(`Sold ${quantity} ${commodity.name} for $${totalRevenue.toFixed(2)}. ${profitLossMsg}`, 'success'),
-        success: true
+        success: true,
+        profit,
+        isProfitable
     };
 };
 

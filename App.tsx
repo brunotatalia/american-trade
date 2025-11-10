@@ -18,8 +18,13 @@ import { RealEstateView } from './components/RealEstateView';
 import { SkillsView } from './components/SkillsView';
 import { EventPopup } from './components/EventPopup';
 import { LogView } from './components/LogView';
+import { MilestonesView } from './components/MilestonesView';
+import { WinConditionsView } from './components/WinConditionsView';
+import { MilestoneNotification } from './components/MilestoneNotification';
+import { VictoryModal } from './components/VictoryModal';
 import { Button } from './components/ui/Button';
 import { CommodityIcon, PropertyIcon, SkillIcon, NewsIcon, LoadingSpinnerIcon } from './components/icons';
+import * as ProgressionService from './services/progressionService';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -63,6 +68,8 @@ const App: React.FC = () => {
 
   const [activeView, setActiveView] = useState<ActiveView>('MARKET');
   const [showApiKeyWarning, setShowApiKeyWarning] = useState<boolean>(!isGeminiAvailable());
+  const [newMilestone, setNewMilestone] = useState<typeof gameState.milestones[string] | null>(null);
+  const [showVictory, setShowVictory] = useState(false);
 
   const addLogEntry = useCallback((message: string, type: LogEntry['type']) => {
     setGameState(prev => ({
@@ -114,18 +121,64 @@ const App: React.FC = () => {
           newLogs.push(...orderLogs);
       }
 
+      // Create temporary game state for progression checks
+      let tempGameState = {...gameState, player: newPlayerState, commodities: updatedCommodities, gameTurn: gameState.gameTurn + 1};
+
+      // Check for milestones
+      const newlyCompletedMilestones = ProgressionService.checkMilestones(tempGameState);
+      if (newlyCompletedMilestones.length > 0) {
+        // Update completed milestones list
+        const updatedCompletedIds = [
+          ...tempGameState.player.progress.completedMilestones,
+          ...newlyCompletedMilestones.map(m => m.id)
+        ];
+        tempGameState.player.progress.completedMilestones = updatedCompletedIds;
+        
+        // Show notification for first new milestone
+        setNewMilestone(newlyCompletedMilestones[0]);
+        
+        newLogs.push(GameLogic.createLog(
+          `🎉 New milestone achieved: ${newlyCompletedMilestones[0].name}!`,
+          'success'
+        ));
+      }
+
+      // Update tier progression
+      const { gameState: tierUpdate, logs: tierLogs } = ProgressionService.updateTier(tempGameState);
+      if (tierUpdate.player) {
+        tempGameState.player = { ...tempGameState.player, ...tierUpdate.player };
+      }
+      newLogs.push(...tierLogs);
+
+      // Update highest net worth
+      const netWorthUpdate = ProgressionService.updateHighestNetWorth(tempGameState);
+      if (netWorthUpdate.player) {
+        tempGameState.player = { ...tempGameState.player, ...netWorthUpdate.player };
+      }
+
+      // Check for win conditions
+      if (!gameState.victoryAchieved) {
+        const winCondition = ProgressionService.checkWinConditions(tempGameState);
+        if (winCondition) {
+          tempGameState.victoryAchieved = winCondition;
+          setShowVictory(true);
+          newLogs.push(GameLogic.createLog(
+            `🏆 VICTORY! You've achieved: ${winCondition.name}!`,
+            'success'
+          ));
+        }
+      }
 
       // Fetch market news (50% chance each turn)
       let latestNewsItem: string | null = null;
       if (Math.random() < 0.5) {
-        latestNewsItem = await GameLogic.fetchMarketNewsForRandomCommodity(gameState);
+        latestNewsItem = await GameLogic.fetchMarketNewsForRandomCommodity(tempGameState);
         if(latestNewsItem) newLogs.push(GameLogic.createLog(`News: ${latestNewsItem}`, 'info'));
       }
 
       // Attempt to trigger a random event
       let newEvent: GameEvent | null = null;
       if (!gameState.currentEvent) { // Only trigger new event if no active event
-          const tempGameState = {...gameState, player: newPlayerState, commodities: updatedCommodities};
           newEvent = await GameLogic.createRandomGameEvent(tempGameState);
           if (newEvent) {
             newLogs.push(GameLogic.createLog(`Event: ${newEvent.title} - ${newEvent.description}`, 'event'));
@@ -134,17 +187,14 @@ const App: React.FC = () => {
       
       setGameState(prev => ({
         ...prev,
-        player: {
-          ...prev.player,
-          ...newPlayerState,
-          money: parseFloat(newPlayerState.money.toFixed(2)),
-        },
+        player: tempGameState.player,
         commodities: updatedCommodities,
-        currentEvent: newEvent || prev.currentEvent, // Keep existing event if new one is null
+        currentEvent: newEvent || prev.currentEvent,
         gameLog: [...prev.gameLog, ...newLogs].slice(-MAX_LOG_ENTRIES),
         gameTurn: prev.gameTurn + 1,
         isLoadingEvent: false,
         marketNews: latestNewsItem ? [latestNewsItem, ...prev.marketNews].slice(0, 10) : prev.marketNews,
+        victoryAchieved: tempGameState.victoryAchieved
       }));
     };
 
@@ -223,6 +273,33 @@ const App: React.FC = () => {
     setGameState(prev => ({ ...prev, currentEvent: null })); // Clear event after choice
   }, [gameState]);
 
+  const handleClaimMilestone = useCallback((milestoneId: string) => {
+    const { gameState: updates, logs } = ProgressionService.claimMilestone(gameState, milestoneId);
+    if (updates.player) {
+      setGameState(prev => ({
+        ...prev,
+        player: updates.player!,
+        gameLog: [...prev.gameLog, ...logs].slice(-MAX_LOG_ENTRIES)
+      }));
+    }
+    logs.forEach(log => addLogEntry(log.message, log.type));
+  }, [gameState, addLogEntry]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'm' || e.key === 'M') {
+        setActiveView('MILESTONES');
+      }
+      if (e.key === 'w' || e.key === 'W') {
+        setActiveView('WIN_CONDITIONS');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
 
   if (!gameState.gameStarted || !gameState.currentEra) {
     return <EraSelector onSelectEra={handleSelectEra} />;
@@ -242,6 +319,10 @@ const App: React.FC = () => {
         return <RealEstateView gameState={gameState} onBuyProperty={handleBuyProperty} />;
       case 'SKILLS':
         return <SkillsView gameState={gameState} onUnlockSkill={handleUnlockSkill} />;
+      case 'MILESTONES':
+        return <MilestonesView gameState={gameState} onClaimMilestone={handleClaimMilestone} />;
+      case 'WIN_CONDITIONS':
+        return <WinConditionsView gameState={gameState} />;
       default:
         return <MarketView 
                     gameState={gameState} 
@@ -284,8 +365,15 @@ const App: React.FC = () => {
             <NavButton view="MARKET" label="Market" icon={<CommodityIcon/>}/>
             <NavButton view="REAL_ESTATE" label="Real Estate" icon={<PropertyIcon/>}/>
             <NavButton view="SKILLS" label="Skills" icon={<SkillIcon/>}/>
-            <div className="mt-auto"> {/* Pushes dashboard to bottom of nav if desired, or integrate into main view */}
-                 {/* Can add quick stats here or a mini-log preview */}
+            
+            <div className="border-t border-gray-700 pt-4 mt-4">
+              <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Progression</div>
+              <NavButton view="MILESTONES" label="Milestones (M)" icon={<span className="text-xl">🎯</span>}/>
+              <NavButton view="WIN_CONDITIONS" label="Victory (W)" icon={<span className="text-xl">🏆</span>}/>
+            </div>
+            
+            <div className="mt-auto">
+                 {/* Quick stats or mini-log preview could go here */}
             </div>
         </aside>
 
@@ -310,6 +398,23 @@ const App: React.FC = () => {
         onClose={() => setGameState(prev => ({ ...prev, currentEvent: null }))}
         onChoice={handleEventChoice}
         gameState={gameState}
+      />
+
+      <MilestoneNotification
+        milestone={newMilestone}
+        onClaim={() => {
+          if (newMilestone) {
+            handleClaimMilestone(newMilestone.id);
+          }
+          setNewMilestone(null);
+        }}
+        onClose={() => setNewMilestone(null)}
+      />
+
+      <VictoryModal
+        winCondition={gameState.victoryAchieved || null}
+        gameState={gameState}
+        onContinue={() => setShowVictory(false)}
       />
     </div>
   );
