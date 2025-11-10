@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - claude/fix-incomplete-description-011CUngLBdAYpceW1NT3QC4M
+      - claude/teleport-session-011-011CUzo7q1hu3XrZVMpZAWEk
   workflow_dispatch:
 
 permissions:
